@@ -160,8 +160,13 @@ local function monitorarOvo()
     
     char.ChildAdded:Connect(function(child)
         if child:IsA("Tool") then
-            task.wait(0.1)
-            fazerTeleporte()
+            local nome = string.lower(child.Name)
+            
+            -- Só teleporta se o nome tiver "egg" ou "ovo"
+            if string.find(nome, "egg") or string.find(nome, "ovo") then
+                task.wait(0.3) -- espera o ovo entrar na mão
+                fazerTeleporte()
+            end
         end
     end)
 end
