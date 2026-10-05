@@ -1,398 +1,435 @@
---[[
-    ═══════════════════════════════════════════
-    MARIN HUB v3 - Steal An Egg
-    Interface Elegante + Speed + Tween Seguro
-    ═══════════════════════════════════════════
-]]
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Marin Hub</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
--- ====== SERVIÇOS ======
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-local LocalPlayer = Players.LocalPlayer
+  body {
+    background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #0a0a0a 70%);
+    height: 100vh;
+    font-family: 'Segoe UI', 'Poppins', sans-serif;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
--- ====== LIMPEZA AUTOMÁTICA ======
-for _, v in pairs(CoreGui:GetChildren()) do
-    if v.Name == "MarinHub" then
-        v:Destroy()
-    end
-end
+  /* ===== BOTÃO PRINCIPAL ===== */
+  .launcher {
+    position: fixed;
+    top: 30px;
+    left: 30px;
+    width: 90px;
+    height: 90px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1000;
+    user-select: none;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: linear-gradient(145deg, #1a1a1a, #0a0a0a);
+    box-shadow:
+      0 0 20px rgba(0, 255, 213, 0.4),
+      0 0 40px rgba(122, 0, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
 
--- ====== ESTADO ======
-local savedPos = nil
-local teleportando = false
-local speedAtivo = false
-local speedValor = 16
-local menuAberto = false
+  .launcher:hover {
+    transform: scale(1.1) rotate(-3deg);
+  }
+  .launcher:active { transform: scale(0.95); }
 
--- ====== CORES ======
-local COR_FUNDO = Color3.fromRGB(18, 18, 22)
-local COR_SECAO = Color3.fromRGB(28, 28, 34)
-local COR_BOTAO = Color3.fromRGB(45, 45, 55)
-local COR_BOTAO_HOVER = Color3.fromRGB(60, 60, 75)
-local COR_VERDE = Color3.fromRGB(0, 220, 130)
-local COR_VERMELHO = Color3.fromRGB(230, 70, 70)
-local COR_AZUL = Color3.fromRGB(70, 130, 230)
-local COR_ROXO = Color3.fromRGB(150, 90, 220)
-local COR_TEXTO = Color3.fromRGB(240, 240, 240)
+  /* Borda RGB girando */
+  .launcher::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 26px;
+    background: conic-gradient(
+      from var(--angle),
+      #ff0000, #ff7300, #fffb00, #48ff00,
+      #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
+    );
+    z-index: -1;
+    animation: spin 4s linear infinite;
+    filter: blur(0.5px);
+  }
 
--- ====== INTERFACE ======
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MarinHub"
-screenGui.Parent = CoreGui
-screenGui.ResetOnSpawn = false
+  /* Glow externo */
+  .launcher::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 30px;
+    background: conic-gradient(
+      from var(--angle),
+      #ff0000, #ff7300, #fffb00, #48ff00,
+      #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
+    );
+    z-index: -2;
+    animation: spin 4s linear infinite;
+    filter: blur(22px);
+    opacity: 0.85;
+  }
 
--- Botão "M"
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 52, 0, 52)
-toggleBtn.Position = UDim2.new(0, 20, 0.5, -26)
-toggleBtn.BackgroundColor3 = COR_FUNDO
-toggleBtn.TextColor3 = COR_VERDE
-toggleBtn.Text = "M"
-toggleBtn.TextSize = 26
-toggleBtn.Font = Enum.Font.GothamBlack
-toggleBtn.BorderSizePixel = 0
-toggleBtn.AutoButtonColor = false
-toggleBtn.Parent = screenGui
+  /* Conteúdo interno do botão */
+  .launcher-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 22px;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(255,255,255,0.08), transparent 50%),
+      linear-gradient(145deg, #151515, #050505);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
 
-local tc = Instance.new("UICorner")
-tc.CornerRadius = UDim.new(0, 14)
-tc.Parent = toggleBtn
+  /* Brilho passando por dentro */
+  .launcher-inner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      115deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.15) 50%,
+      transparent 60%
+    );
+    animation: shine 3s linear infinite;
+  }
 
-local ts = Instance.new("UIStroke")
-ts.Color = COR_VERDE
-ts.Thickness = 2
-ts.Transparency = 0.4
-ts.Parent = toggleBtn
+  /* Letra M estilizada em SVG */
+  .launcher-inner svg {
+    width: 52px;
+    height: 52px;
+    filter: drop-shadow(0 0 6px rgba(0, 255, 213, 0.8));
+    z-index: 2;
+  }
 
--- Menu
-local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 0, 0, 0)
-menu.Position = UDim2.new(0, 85, 0.5, -240)
-menu.BackgroundColor3 = COR_FUNDO
-menu.BorderSizePixel = 0
-menu.Visible = false
-menu.ClipsDescendants = true
-menu.Parent = screenGui
+  /* Animações */
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
 
-local mc = Instance.new("UICorner")
-mc.CornerRadius = UDim.new(0, 16)
-mc.Parent = menu
+  @keyframes spin {
+    to { --angle: 360deg; }
+  }
 
-local ms = Instance.new("UIStroke")
-ms.Color = COR_VERDE
-ms.Thickness = 1.5
-ms.Transparency = 0.5
-ms.Parent = menu
+  @keyframes shine {
+    0%   { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+  }
 
--- Cabeçalho (área de arrastar)
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 60)
-header.BackgroundColor3 = COR_SECAO
-header.BorderSizePixel = 0
-header.Parent = menu
+  @keyframes rgb {
+    0%   { background-position: 0% 50%; }
+    100% { background-position: 400% 50%; }
+  }
 
-local hc = Instance.new("UICorner")
-hc.CornerRadius = UDim.new(0, 16)
-hc.Parent = header
+  /* ===== PAINEL ===== */
+  .panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    width: 420px;
+    padding: 35px 30px;
+    border-radius: 24px;
+    background: linear-gradient(145deg, #131313, #0a0a0a);
+    color: #fff;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: grab;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+  }
 
-local hf = Instance.new("Frame")
-hf.Size = UDim2.new(1, 0, 0, 20)
-hf.Position = UDim2.new(0, 0, 1, -20)
-hf.BackgroundColor3 = COR_SECAO
-hf.BorderSizePixel = 0
-hf.Parent = header
+  .panel.open {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+  }
 
-local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, -40, 0, 30)
-titulo.Position = UDim2.new(0, 20, 0, 8)
-titulo.BackgroundTransparency = 1
-titulo.Text = "MARIN HUB"
-titulo.TextColor3 = COR_VERDE
-titulo.TextSize = 22
-titulo.Font = Enum.Font.GothamBlack
-titulo.TextXAlignment = Enum.TextXAlignment.Left
-titulo.Parent = header
+  .panel:active { cursor: grabbing; }
 
-local subtitulo = Instance.new("TextLabel")
-subtitulo.Size = UDim2.new(1, -40, 0, 18)
-subtitulo.Position = UDim2.new(0, 20, 0, 35)
-subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v3.0  (arraste aqui)"
-subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
-subtitulo.TextSize = 11
-subtitulo.Font = Enum.Font.Gotham
-subtitulo.TextXAlignment = Enum.TextXAlignment.Left
-subtitulo.Parent = header
+  .panel::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 26px;
+    background: conic-gradient(
+      from var(--angle),
+      #ff0000, #ff7300, #fffb00, #48ff00,
+      #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
+    );
+    z-index: -1;
+    animation: spin 6s linear infinite;
+  }
 
--- Container
-local container = Instance.new("Frame")
-container.Size = UDim2.new(1, -24, 1, -80)
-container.Position = UDim2.new(0, 12, 0, 68)
-container.BackgroundTransparency = 1
-container.Parent = menu
+  .panel::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 30px;
+    background: conic-gradient(
+      from var(--angle),
+      #ff0000, #ff7300, #fffb00, #48ff00,
+      #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
+    );
+    z-index: -2;
+    animation: spin 6s linear infinite;
+    filter: blur(28px);
+    opacity: 0.8;
+  }
 
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 8)
-layout.Parent = container
+  /* Logo bonito dentro do painel */
+  .logo-wrap {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    margin: 0 auto 20px;
+    border-radius: 30px;
+    background: linear-gradient(145deg, #1a1a1a, #050505);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+      0 0 25px rgba(0, 255, 213, 0.35),
+      0 0 50px rgba(122, 0, 255, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
 
--- Botão elegante
-local function criarBotaoElegante(texto, cor, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 42)
-    btn.BackgroundColor3 = COR_BOTAO
-    btn.TextColor3 = COR_TEXTO
-    btn.Text = texto
-    btn.TextSize = 14
-    btn.Font = Enum.Font.GothamMedium
-    btn.BorderSizePixel = 0
-    btn.AutoButtonColor = false
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Parent = container
-    
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 10)
-    c.Parent = btn
-    
-    local st = Instance.new("UIStroke")
-    st.Color = cor
-    st.Thickness = 1
-    st.Transparency = 0.6
-    st.Parent = btn
-    
-    local p = Instance.new("UIPadding")
-    p.PaddingLeft = UDim.new(0, 16)
-    p.Parent = btn
-    
-    local ind = Instance.new("Frame")
-    ind.Size = UDim2.new(0, 4, 0, 20)
-    ind.Position = UDim2.new(0, 8, 0.5, -10)
-    ind.BackgroundColor3 = cor
-    ind.BorderSizePixel = 0
-    ind.Parent = btn
-    
-    local ic = Instance.new("UICorner")
-    ic.CornerRadius = UDim.new(0, 4)
-    ic.Parent = ind
-    
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COR_BOTAO_HOVER}):Play()
-        TweenService:Create(st, TweenInfo.new(0.15), {Transparency = 0.2}):Play()
-    end)
-    
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COR_BOTAO}):Play()
-        TweenService:Create(st, TweenInfo.new(0.15), {Transparency = 0.6}):Play()
-    end)
-    
-    btn.MouseButton1Click:Connect(callback)
-    return btn
-end
+  .logo-wrap::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 33px;
+    background: conic-gradient(
+      from var(--angle),
+      #ff0000, #ff7300, #fffb00, #48ff00,
+      #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
+    );
+    z-index: -1;
+    animation: spin 5s linear infinite;
+  }
 
--- ====== TELEPORTE SEGURO ======
-local function fazerTeleporte()
-    if teleportando then return end
-    teleportando = true
-    
-    local char = LocalPlayer.Character
-    if not char then teleportando = false return end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid or not savedPos then teleportando = false return end
-    
-    -- 🛡️ PROTEÇÃO 1: God Mode
-    local maxHealthOriginal = humanoid.MaxHealth
-    local healthOriginal = humanoid.Health
-    humanoid.MaxHealth = math.huge
-    humanoid.Health = math.huge
-    
-    -- 🛡️ PROTEÇÃO 2: Desliga colisão (pra não cair)
-    local colisaoOriginal = root.CanCollide
-    root.CanCollide = false
-    
-    -- 🛡️ PROTEÇÃO 3: Zera velocidade
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-    task.wait(0.1)
-    
-    -- Calcula tempo baseado na distância (mais lento = natural)
-    local distancia = (savedPos - root.Position).Magnitude
-    local duracao = math.clamp(distancia / 60, 0.8, 3)
-    
-    local tweenInfo = TweenInfo.new(duracao, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(savedPos)})
-    tween:Play()
-    tween.Completed:Wait()
-    
-    -- Restaura tudo
-    task.wait(0.1)
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-    root.CanCollide = colisaoOriginal
-    
-    -- Restaura vida original
-    humanoid.MaxHealth = maxHealthOriginal
-    humanoid.Health = math.min(healthOriginal, maxHealthOriginal)
-    
-    teleportando = false
-end
+  .logo-wrap::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 35px;
+    background: conic-gradient(
+      from var(--angle),
+      #ff0000, #ff7300, #fffb00, #48ff00,
+      #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000
+    );
+    z-index: -2;
+    animation: spin 5s linear infinite;
+    filter: blur(20px);
+    opacity: 0.9;
+  }
 
--- ====== BOTÕES ======
-criarBotaoElegante("📍  Salvar Posição", COR_AZUL, function()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        savedPos = char.HumanoidRootPart.Position
-    end
-end)
+  .logo-wrap svg {
+    width: 75px;
+    height: 75px;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 213, 0.9));
+  }
 
-criarBotaoElegante("🚀  Teleportar (Safe Zone)", COR_VERMELHO, function()
-    fazerTeleporte()
-end)
+  .panel h1 {
+    font-size: 26px;
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+    background-size: 400%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rgb 6s linear infinite;
+    filter: drop-shadow(0 0 15px rgba(0, 255, 213, 0.5));
+  }
 
-local speedBtn
-speedBtn = criarBotaoElegante("⚡  Speed: OFF", COR_ROXO, function()
-    speedAtivo = not speedAtivo
-    if speedAtivo then
-        speedBtn.Text = "⚡  Speed: " .. speedValor
-        
-        -- Cria caixa de texto pra digitar
-        local box = Instance.new("TextBox")
-        box.Size = UDim2.new(1, -20, 0, 36)
-        box.BackgroundColor3 = COR_SECAO
-        box.TextColor3 = COR_TEXTO
-        box.PlaceholderText = "Velocidade (1-300)"
-        box.Text = tostring(speedValor)
-        box.Font = Enum.Font.Gotham
-        box.TextSize = 14
-        box.BorderSizePixel = 0
-        box.Parent = container
-        
-        local bc = Instance.new("UICorner")
-        bc.CornerRadius = UDim.new(0, 8)
-        bc.Parent = box
-        
-        box:CaptureFocus()
-        
-        box.FocusLost:Connect(function()
-            local valor = tonumber(box.Text)
-            if valor then
-                speedValor = math.clamp(valor, 1, 300)
-                speedBtn.Text = "⚡  Speed: " .. speedValor
-            end
-            box:Destroy()
-        end)
-    else
-        speedBtn.Text = "⚡  Speed: OFF"
-        speedValor = 16
-    end
-end)
+  .panel .subtitle {
+    font-size: 12px;
+    text-align: center;
+    color: #888;
+    letter-spacing: 4px;
+    margin-bottom: 22px;
+    text-transform: uppercase;
+  }
 
--- ====== ARRASTAR O MENU (pelo cabeçalho) ======
-local arrastandoMenu = false
-local inicioMenu, posMenu
+  .panel p {
+    font-size: 13px;
+    color: #999;
+    text-align: center;
+    margin-bottom: 22px;
+    line-height: 1.6;
+  }
 
-header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        arrastandoMenu = true
-        inicioMenu = input.Position
-        posMenu = menu.Position
-    end
-end)
+  .panel button {
+    display: block;
+    margin: 0 auto;
+    padding: 12px 32px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(90deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8);
+    background-size: 400%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    animation: rgb 8s linear infinite;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 20px rgba(0, 255, 213, 0.4);
+  }
 
-header.InputChanged:Connect(function(input)
-    if arrastandoMenu and input.UserInputType == Enum.UserInputType.Touch then
-        local delta = input.Position - inicioMenu
-        menu.Position = UDim2.new(
-            posMenu.X.Scale,
-            posMenu.X.Offset + delta.X,
-            posMenu.Y.Scale,
-            posMenu.Y.Offset + delta.Y
-        )
-    end
-end)
+  .panel button:hover {
+    transform: scale(1.06);
+    box-shadow: 0 0 30px rgba(0, 255, 213, 0.7);
+  }
 
-header.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        arrastandoMenu = false
-    end
-end)
+  .close-btn {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 20px;
+    color: #666;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+  }
+  .close-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+</style>
+</head>
+<body>
 
--- ====== ARRASTAR BOTÃO "M" ======
-local arrastandoM = false
-local inicioM, posM
+<!-- Botão flutuante -->
+<div class="launcher" id="launcher">
+  <div class="launcher-inner">
+    <svg viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00ffd5"/>
+          <stop offset="50%" stop-color="#7a00ff"/>
+          <stop offset="100%" stop-color="#ff00c8"/>
+        </linearGradient>
+      </defs>
+      <!-- M estilizado -->
+      <path d="M20 80 L20 25 L35 25 L50 55 L65 25 L80 25 L80 80 L65 80 L65 48 L52 75 L48 75 L35 48 L35 80 Z"
+            fill="url(#grad1)"/>
+    </svg>
+  </div>
+</div>
 
-toggleBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        arrastandoM = true
-        inicioM = input.Position
-        posM = toggleBtn.Position
-    end
-end)
+<!-- Painel -->
+<div class="panel" id="panel">
+  <div class="close-btn" id="closeBtn">✕</div>
+  <div class="logo-wrap">
+    <svg viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#00ffd5"/>
+          <stop offset="50%" stop-color="#7a00ff"/>
+          <stop offset="100%" stop-color="#ff00c8"/>
+        </linearGradient>
+      </defs>
+      <path d="M20 80 L20 25 L35 25 L50 55 L65 25 L80 25 L80 80 L65 80 L65 48 L52 75 L48 75 L35 48 L35 80 Z"
+            fill="url(#grad2)"/>
+    </svg>
+  </div>
+  <h1>MARIN HUB</h1>
+  <div class="subtitle">Premium Panel</div>
+  <p>Arraste-me para onde quiser</p>
+  <button>Entrar</button>
+</div>
 
-toggleBtn.InputChanged:Connect(function(input)
-    if arrastandoM and input.UserInputType == Enum.UserInputType.Touch then
-        local delta = input.Position - inicioM
-        toggleBtn.Position = UDim2.new(
-            posM.X.Scale,
-            posM.X.Offset + delta.X,
-            posM.Y.Scale,
-            posM.Y.Offset + delta.Y
-        )
-    end
-end)
+<script>
+  const launcher = document.getElementById('launcher');
+  const panel = document.getElementById('panel');
+  const closeBtn = document.getElementById('closeBtn');
 
-toggleBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        arrastandoM = false
-    end
-end)
+  // Abrir
+  launcher.addEventListener('click', () => {
+    panel.classList.add('open');
+    panel.style.left = '50%';
+    panel.style.top = '50%';
+    panel.style.transform = 'translate(-50%, -50%) scale(1)';
+  });
 
--- ====== ABRIR/FECHAR MENU ======
-local function animarMenu(abrir)
-    if abrir then
-        menu.Visible = true
-        menu.Size = UDim2.new(0, 0, 0, 0)
-        TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {
-            Size = UDim2.new(0, 240, 0, 320)
-        }):Play()
-    else
-        local t = TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
-            Size = UDim2.new(0, 0, 0, 0)
-        })
-        t:Play()
-        t.Completed:Connect(function() menu.Visible = false end)
-    end
-end
+  // Fechar
+  closeBtn.addEventListener('click', () => {
+    panel.classList.remove('open');
+  });
 
-toggleBtn.MouseButton1Click:Connect(function()
-    menuAberto = not menuAberto
-    animarMenu(menuAberto)
-end)
+  // Arrastar painel
+  let isDragging = false, offsetX, offsetY;
 
--- ====== SPEED COM BUNNY HOP ======
-RunService.RenderStepped:Connect(function()
-    if not speedAtivo then return end
-    
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid then return end
-    
-    -- Aplica velocidade direto no root (bypassa anti-cheat do WalkSpeed)
-    local moveDir = humanoid.MoveDirection
-    if moveDir.Magnitude > 0 then
-        root.AssemblyLinearVelocity = Vector3.new(
-            moveDir.X * speedValor,
-            root.AssemblyLinearVelocity.Y,
-            moveDir.Z * speedValor
-        )
-        -- Bunny Hop: pula automaticamente
-        humanoid.Jump = true
-    end
-end)
+  panel.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON' ||
+        e.target.classList.contains('close-btn')) return;
+    isDragging = true;
+    const rect = panel.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    panel.style.transition = 'none';
+    panel.style.transform = 'none';
+    panel.style.left = rect.left + 'px';
+    panel.style.top = rect.top + 'px';
+  });
 
-print("Marin Hub v3 carregado!")
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    panel.style.left = (e.clientX - offsetX) + 'px';
+    panel.style.top  = (e.clientY - offsetY) + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      panel.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    }
+  });
+
+  // Arrastar botão
+  let dragLauncher = false, lx, ly;
+
+  launcher.addEventListener('mousedown', (e) => {
+    dragLauncher = true;
+    const rect = launcher.getBoundingClientRect();
+    lx = e.clientX - rect.left;
+    ly = e.clientY - rect.top;
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragLauncher) return;
+    launcher.style.left = (e.clientX - lx) + 'px';
+    launcher.style.top  = (e.clientY - ly) + 'px';
+  });
+
+  document.addEventListener('mouseup', () => dragLauncher = false);
+</script>
+
+</body>
+</html>
