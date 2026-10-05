@@ -1,19 +1,34 @@
+--[[
+    ═══════════════════════════════════════════
+    MARIN HUB - Steal An Egg
+    ═══════════════════════════════════════════
+    1. ESP Eggs       - Mostra os ovos no mapa
+    2. Teleport Tween - Salva/teleporta com Tween
+    3. Speed          - Ajusta velocidade (1 a 1000)
+    ═══════════════════════════════════════════
+]]
+
+-- ====== SERVIÇOS ======
 local TweenService = game:GetService("TweenService")
-local P = game:GetService("Players").LocalPlayer
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
 
+-- ====== ESTADO GLOBAL ======
 local savedPos = nil
-local gravityOff = false
 local teleportando = false
-local targetEgg = nil
+local espAtivo = false
+local speedValue = 16
+local espObjects = {}
 
--- ====== CRIAR A INTERFACE ======
+-- ====== CRIAR INTERFACE ======
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MarinHub"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
 
--- Botão principal
+-- Botão principal (abre menu)
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 50, 0, 50)
 toggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
@@ -31,8 +46,8 @@ corner.Parent = toggleBtn
 
 -- Frame do menu
 local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 220, 0, 340)
-menu.Position = UDim2.new(0, 80, 0.5, -170)
+menu.Size = UDim2.new(0, 230, 0, 360)
+menu.Position = UDim2.new(0, 80, 0.5, -180)
 menu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -42,16 +57,26 @@ local menuCorner = Instance.new("UICorner")
 menuCorner.CornerRadius = UDim.new(0, 12)
 menuCorner.Parent = menu
 
+-- Título
+local titulo = Instance.new("TextLabel")
+titulo.Size = UDim2.new(1, 0, 0, 30)
+titulo.Position = UDim2.new(0, 0, 0, 5)
+titulo.BackgroundTransparency = 1
+titulo.Text = "MARIN HUB"
+titulo.TextColor3 = Color3.fromRGB(0, 255, 100)
+titulo.TextSize = 18
+titulo.Font = Enum.Font.GothamBold
+titulo.Parent = menu
+
 -- Função para criar botões
-local function criarBotao(nome, texto, cor, posY, callback)
+local function criarBotao(texto, cor, posY, callback)
     local btn = Instance.new("TextButton")
-    btn.Name = nome
-    btn.Size = UDim2.new(0, 180, 0, 40)
+    btn.Size = UDim2.new(0, 190, 0, 38)
     btn.Position = UDim2.new(0, 20, 0, posY)
     btn.BackgroundColor3 = cor
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = texto
-    btn.TextSize = 15
+    btn.TextSize = 14
     btn.Font = Enum.Font.GothamBold
     btn.BorderSizePixel = 0
     btn.Parent = menu
@@ -64,12 +89,68 @@ local function criarBotao(nome, texto, cor, posY, callback)
     return btn
 end
 
+-- ====== SISTEMA DE ESP ======
+local function criarESP(objeto)
+    if espObjects[objeto] then return end
+    
+    local box = Instance.new("BoxHandleAdornment")
+    box.Size = objeto:IsA("Model") and objeto:GetExtentsSize() or objeto.Size
+    box.Adornee = objeto
+    box.AlwaysOnTop = true
+    box.ZIndex = 5
+    box.Transparency = 0.5
+    box.Color3 = Color3.fromRGB(255, 215, 0)
+    box.Parent = objeto
+    
+    local nome = Instance.new("BillboardGui")
+    nome.Size = UDim2.new(0, 100, 0, 20)
+    nome.StudsOffset = Vector3.new(0, 3, 0)
+    nome.AlwaysOnTop = true
+    nome.Parent = objeto
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = objeto.Name
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextStrokeTransparency = 0
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamBold
+    label.Parent = nome
+    
+    espObjects[objeto] = {box, nome}
+end
+
+local function limparESP()
+    for obj, items in pairs(espObjects) do
+        for _, item in ipairs(items) do
+            if item and item.Parent then
+                item:Destroy()
+            end
+        end
+    end
+    espObjects = {}
+end
+
+local function atualizarESP()
+    if not espAtivo then return end
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if (obj:IsA("Model") or obj:IsA("BasePart")) and not espObjects[obj] then
+            local nome = string.lower(obj.Name)
+            if string.find(nome, "egg") or string.find(nome, "ovo") then
+                criarESP(obj)
+            end
+        end
+    end
+end
+
 -- ====== FUNÇÃO DE TELEPORTE ======
 local function fazerTeleporte()
     if teleportando then return end
     teleportando = true
     
-    local char = P.Character
+    local char = LocalPlayer.Character
     if not char then
         teleportando = false
         return
@@ -100,94 +181,47 @@ local function fazerTeleporte()
     print("Teleportado!")
 end
 
--- ====== SISTEMA DE TARGET EGG ======
-local function encontrarOvoAlvo()
-    local char = P.Character
-    if not char or not targetEgg then return nil end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return nil end
-    
-    local melhorOvo = nil
-    local menorDistancia = math.huge
-    local alvoLower = string.lower(targetEgg)
-    
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") or obj:IsA("Model") then
-            local nome = string.lower(obj.Name)
-            if string.find(nome, alvoLower) then
-                local pos
-                if obj:IsA("Model") then
-                    local prim = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                    if prim then pos = prim.Position end
-                else
-                    pos = obj.Position
-                end
-                
-                if pos then
-                    local dist = (pos - root.Position).Magnitude
-                    if dist < menorDistancia then
-                        melhorOvo = obj
-                        menorDistancia = dist
-                    end
-                end
-            end
-        end
-    end
-    
-    return melhorOvo
-end
-
-local function tweenParaOvo(ovo)
-    local char = P.Character
-    if not char or not ovo then return end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-    
-    local posOvo
-    if ovo:IsA("Model") then
-        local prim = ovo.PrimaryPart or ovo:FindFirstChildWhichIsA("BasePart")
-        if prim then posOvo = prim.Position end
-    else
-        posOvo = ovo.Position
-    end
-    
-    if not posOvo then return end
-    
-    local distancia = (posOvo - root.Position).Magnitude
-    local duracao = math.clamp(distancia / 80, 0.5, 3)
-    
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-    
-    local tweenInfo = TweenInfo.new(duracao, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(posOvo + Vector3.new(0, 3, 0))})
-    tween:Play()
-    tween.Completed:Wait()
-end
-
 -- ====== BOTÕES ======
-criarBotao("Salvar", "📍 Salvar Posição", Color3.fromRGB(50, 120, 200), 15, function()
-    local char = P.Character
+criarBotao("📍 Salvar Posição", Color3.fromRGB(50, 120, 200), 45, function()
+    local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         savedPos = char.HumanoidRootPart.Position
         print("Posição salva!")
     end
 end)
 
-criarBotao("Teleportar", "🚀 Teleportar (Suave)", Color3.fromRGB(200, 60, 60), 60, function()
+criarBotao("🚀 Teleportar (Tween)", Color3.fromRGB(200, 60, 60), 90, function()
     fazerTeleporte()
 end)
 
-criarBotao("Alvo", "🎯 Definir Ovo Alvo", Color3.fromRGB(200, 150, 50), 105, function(btn)
+criarBotao("🥚 ESP Eggs: OFF", Color3.fromRGB(200, 150, 50), 135, function(btn)
+    espAtivo = not espAtivo
+    if espAtivo then
+        btn.Text = "🥚 ESP Eggs: ON"
+        atualizarESP()
+        -- Atualiza a cada 2 segundos pra pegar ovos novos
+        task.spawn(function()
+            while espAtivo do
+                atualizarESP()
+                task.wait(2)
+            end
+            limparESP()
+        end)
+    else
+        btn.Text = "🥚 ESP Eggs: OFF"
+        limparESP()
+    end
+end)
+
+criarBotao("⚡ Speed: 16", Color3.fromRGB(100, 180, 60), 180, function(btn)
+    -- Cria uma caixa de texto pra digitar a velocidade
     local box = Instance.new("TextBox")
-    box.Size = UDim2.new(0, 180, 0, 35)
-    box.Position = UDim2.new(0, 20, 0, 150)
+    box.Size = UDim2.new(0, 190, 0, 35)
+    box.Position = UDim2.new(0, 20, 0, 220)
     box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     box.TextColor3 = Color3.fromRGB(255, 255, 255)
-    box.PlaceholderText = "Nome do ovo (ex: Crane)"
-    box.Text = ""
+    box.PlaceholderText = "Digite a velocidade (1-1000)"
+    box.Text = tostring(speedValue)
     box.Font = Enum.Font.Gotham
     box.TextSize = 14
     box.Parent = menu
@@ -197,57 +231,18 @@ criarBotao("Alvo", "🎯 Definir Ovo Alvo", Color3.fromRGB(200, 150, 50), 105, f
     c.Parent = box
     
     box.FocusLost:Connect(function()
-        if box.Text ~= "" then
-            targetEgg = box.Text
-            btn.Text = "🎯 Alvo: " .. targetEgg
-            print("Alvo definido:", targetEgg)
+        local valor = tonumber(box.Text)
+        if valor then
+            speedValue = math.clamp(valor, 1, 1000)
+            btn.Text = "⚡ Speed: " .. speedValue
+            print("Speed definida:", speedValue)
         end
         box:Destroy()
     end)
 end)
 
-criarBotao("IrParaOvo", "🥚 Ir Para o Ovo Alvo", Color3.fromRGB(60, 180, 100), 195, function()
-    if not targetEgg then
-        print("Defina um alvo primeiro!")
-        return
-    end
-    local ovo = encontrarOvoAlvo()
-    if ovo then
-        tweenParaOvo(ovo)
-        print("Tween para o ovo:", ovo.Name)
-    else
-        print("Ovo alvo não encontrado no mapa.")
-    end
-end)
-
-criarBotao("Scanner", "🔍 Escanear Ovos", Color3.fromRGB(80, 180, 200), 240, function()
-    print("=== OVOS ENCONTRADOS ===")
-    local encontrados = {}
-    
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if obj:IsA("Model") or obj:IsA("BasePart") then
-            local nome = string.lower(obj.Name)
-            if string.find(nome, "egg") or string.find(nome, "ovo") then
-                if not encontrados[obj.Name] then
-                    encontrados[obj.Name] = true
-                    print("🥚", obj.Name)
-                end
-            end
-        end
-    end
-    
-    print("=== FIM DA LISTA ===")
-end)
-
-criarBotao("Gravidade", "🌌 Gravidade: OFF", Color3.fromRGB(100, 60, 180), 285, function(btn)
-    gravityOff = not gravityOff
-    if gravityOff then
-        workspace.Gravity = 0
-        btn.Text = "🌌 Gravidade: ON"
-    else
-        workspace.Gravity = 196.2
-        btn.Text = "🌌 Gravidade: OFF"
-    end
+criarBotao("❌ Fechar Menu", Color3.fromRGB(80, 80, 80), 285, function()
+    menu.Visible = false
 end)
 
 -- ====== ABRIR/FECHAR MENU ======
@@ -255,7 +250,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     menu.Visible = not menu.Visible
 end)
 
--- ====== ARRASTAR O BOTÃO PRINCIPAL ======
+-- ====== ARRASTAR BOTÃO "M" ======
 local dragging = false
 local dragStart, startPos
 
@@ -280,29 +275,15 @@ toggleBtn.InputEnded:Connect(function(input)
     end
 end)
 
--- ====== AUTO TELEPORTE AO PEGAR OVO ======
-local function monitorarOvo()
-    local char = P.Character
-    if not char then return end
-    
-    char.ChildAdded:Connect(function(child)
-        if child:IsA("Tool") then
-            local nome = string.lower(child.Name)
-            if string.find(nome, "egg") or string.find(nome, "ovo") then
-                task.wait(0.3)
-                fazerTeleporte()
-            end
+-- ====== APLICAR SPEED CONTINUAMENTE ======
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = speedValue
         end
-    end)
-end
-
-P.CharacterAdded:Connect(function()
-    task.wait(1)
-    monitorarOvo()
+    end
 end)
-
-if P.Character then
-    monitorarOvo()
-end
 
 print("Marin Hub carregado!")
