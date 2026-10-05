@@ -5,6 +5,7 @@ local CoreGui = game:GetService("CoreGui")
 local savedPos = nil
 local gravityOff = false
 local teleportando = false
+local targetEgg = nil
 
 -- ====== CRIAR A INTERFACE ======
 local screenGui = Instance.new("ScreenGui")
@@ -30,8 +31,8 @@ corner.Parent = toggleBtn
 
 -- Frame do menu
 local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 220, 0, 220)
-menu.Position = UDim2.new(0, 80, 0.5, -110)
+menu.Size = UDim2.new(0, 220, 0, 280)
+menu.Position = UDim2.new(0, 80, 0.5, -140)
 menu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -45,12 +46,12 @@ menuCorner.Parent = menu
 local function criarBotao(nome, texto, cor, posY, callback)
     local btn = Instance.new("TextButton")
     btn.Name = nome
-    btn.Size = UDim2.new(0, 180, 0, 45)
+    btn.Size = UDim2.new(0, 180, 0, 40)
     btn.Position = UDim2.new(0, 20, 0, posY)
     btn.BackgroundColor3 = cor
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = texto
-    btn.TextSize = 16
+    btn.TextSize = 15
     btn.Font = Enum.Font.GothamBold
     btn.BorderSizePixel = 0
     btn.Parent = menu
@@ -99,8 +100,75 @@ local function fazerTeleporte()
     print("Teleportado!")
 end
 
+-- ====== SISTEMA DE TARGET EGG ======
+local function encontrarOvoAlvo()
+    local char = P.Character
+    if not char or not targetEgg then return nil end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    
+    local melhorOvo = nil
+    local menorDistancia = math.huge
+    local alvoLower = string.lower(targetEgg)
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            local nome = string.lower(obj.Name)
+            if string.find(nome, alvoLower) then
+                local pos
+                if obj:IsA("Model") then
+                    local prim = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                    if prim then pos = prim.Position end
+                else
+                    pos = obj.Position
+                end
+                
+                if pos then
+                    local dist = (pos - root.Position).Magnitude
+                    if dist < menorDistancia then
+                        melhorOvo = obj
+                        menorDistancia = dist
+                    end
+                end
+            end
+        end
+    end
+    
+    return melhorOvo
+end
+
+local function tweenParaOvo(ovo)
+    local char = P.Character
+    if not char or not ovo then return end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local posOvo
+    if ovo:IsA("Model") then
+        local prim = ovo.PrimaryPart or ovo:FindFirstChildWhichIsA("BasePart")
+        if prim then posOvo = prim.Position end
+    else
+        posOvo = ovo.Position
+    end
+    
+    if not posOvo then return end
+    
+    local distancia = (posOvo - root.Position).Magnitude
+    local duracao = math.clamp(distancia / 80, 0.5, 3)
+    
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    
+    local tweenInfo = TweenInfo.new(duracao, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(posOvo + Vector3.new(0, 3, 0))})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
 -- ====== BOTÕES ======
-criarBotao("Salvar", "📍 Salvar Posição", Color3.fromRGB(50, 120, 200), 20, function()
+criarBotao("Salvar", "📍 Salvar Posição", Color3.fromRGB(50, 120, 200), 15, function()
     local char = P.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         savedPos = char.HumanoidRootPart.Position
@@ -108,11 +176,51 @@ criarBotao("Salvar", "📍 Salvar Posição", Color3.fromRGB(50, 120, 200), 20, 
     end
 end)
 
-criarBotao("Teleportar", "🚀 Teleportar (Suave)", Color3.fromRGB(200, 60, 60), 75, function()
+criarBotao("Teleportar", "🚀 Teleportar (Suave)", Color3.fromRGB(200, 60, 60), 60, function()
     fazerTeleporte()
 end)
 
-criarBotao("Gravidade", "🌌 Gravidade: OFF", Color3.fromRGB(100, 60, 180), 130, function(btn)
+criarBotao("Alvo", "🎯 Definir Ovo Alvo", Color3.fromRGB(200, 150, 50), 105, function(btn)
+    local box = Instance.new("TextBox")
+    box.Size = UDim2.new(0, 180, 0, 35)
+    box.Position = UDim2.new(0, 20, 0, 150)
+    box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.PlaceholderText = "Nome do ovo (ex: Crane)"
+    box.Text = ""
+    box.Font = Enum.Font.Gotham
+    box.TextSize = 14
+    box.Parent = menu
+    
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 6)
+    c.Parent = box
+    
+    box.FocusLost:Connect(function()
+        if box.Text ~= "" then
+            targetEgg = box.Text
+            btn.Text = "🎯 Alvo: " .. targetEgg
+            print("Alvo definido:", targetEgg)
+        end
+        box:Destroy()
+    end)
+end)
+
+criarBotao("IrParaOvo", "🥚 Ir Para o Ovo Alvo", Color3.fromRGB(60, 180, 100), 195, function()
+    if not targetEgg then
+        print("Defina um alvo primeiro!")
+        return
+    end
+    local ovo = encontrarOvoAlvo()
+    if ovo then
+        tweenParaOvo(ovo)
+        print("Tween para o ovo:", ovo.Name)
+    else
+        print("Ovo alvo não encontrado no mapa.")
+    end
+end)
+
+criarBotao("Gravidade", "🌌 Gravidade: OFF", Color3.fromRGB(100, 60, 180), 240, function(btn)
     gravityOff = not gravityOff
     if gravityOff then
         workspace.Gravity = 0
@@ -161,10 +269,8 @@ local function monitorarOvo()
     char.ChildAdded:Connect(function(child)
         if child:IsA("Tool") then
             local nome = string.lower(child.Name)
-            
-            -- Só teleporta se o nome tiver "egg" ou "ovo"
             if string.find(nome, "egg") or string.find(nome, "ovo") then
-                task.wait(0.3) -- espera o ovo entrar na mão
+                task.wait(0.3)
                 fazerTeleporte()
             end
         end
