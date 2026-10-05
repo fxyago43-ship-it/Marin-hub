@@ -1,7 +1,7 @@
 --[[
     ═══════════════════════════════════════════
     MARIN HUB - Steal An Egg
-    Interface Elegante
+    Interface Elegante + ESP com Pets
     ═══════════════════════════════════════════
 ]]
 
@@ -32,14 +32,37 @@ local COR_AMARELO = Color3.fromRGB(240, 180, 60)
 local COR_ROXO = Color3.fromRGB(150, 90, 220)
 local COR_TEXTO = Color3.fromRGB(240, 240, 240)
 
+-- ====== MAPA DE PETS POR BIOMA ======
+local petsPorBioma = {
+    forest = "🐔 Chicken | 🐶 Dog | 🐦 Bird | 🦉 Owl | 🦝 Raccoon | 🐻 Bear | 🦊 Fox | 🐒 Brr Brr",
+    lake = "🐸 Frog | 🦆 Duckling | 🐟 Catfish | 🐢 Turtle | 🦢 Swan | 🐉 Trulimero | 🦎 Axolotl | 🐋 Leviathan",
+    desert = "🐭 Jerboa | 🦊 Fennec | 🐪 Camel | 🐍 Tob Tobi | 🐍 Snake | 🕷️ Sand Spider | 🦂 Scorpion | 🐈 Royal Sphinx",
+    jungle = "🦜 Toucan | 🐒 Chimpanzee | 🐊 Crocodile | 🦍 Gorilla | 🦧 Orangutini | 🕷️ Spider | 🐅 Tiger | 🐍 King Snake",
+    snow = "🐧 Penguin | 🦭 Walrus | 🐻‍❄️ Polar Bear | 🐯 Sabertooth | 🦣 Mammoth | 👑 King Mammoth | ❄️ Yeti | 🐉 Ice Dragon",
+    volcano = "🦎 Lava Gecko | 🐸 Lava Frog | 🐂 Flaming Bull | 🦎 Lava Iguana | 🌶️ Chillin Chilli | 🐕 Cerberus | 🔥 Phoenix | 🐉 Lava Dragon",
+    abyss = "🐟 Parrotfish | 🐟 Swordfish | 🦈 Shark | 🐋 Orca | 🐋 Whale Shark | 🐳 Beluga | 🦑 Kraken | 🐙 El Maja",
+    prehistoric = "🦤 Dodo | 🦅 Pterodactyl | 🦕 Ankylosaurus | 🦏 Triceratops | 🦕 Bronto | 🦖 Tralaledon | 🦖 T-Rex | 🦎 Mosasaurus",
+    cosmic = "🐛 Centapede | 🦎 Cosmic Gecko | 🦍 Cosmic Gorilla | 🐄 La Vacca | 🐉 Cosmic Dragon | 💀 Cosmic Skeleton | 🌙 Lunar Dragon | 🦄 Unicorn",
+    cherry = "🐦 Crane | 🦎 Salamander | 🐼 Red Panda | 🐟 Koi | 🦉 Snowy Owl | 🦌 Stag | 🐅 Oni Tiger | 🦊 Kitsune",
+    titan = "🦀 Crustacia | 🕷️ Spideron | 🦎 Bladehide | 🦗 Mantaris | 🦏 Rhinotaur | 🦈 Mutant Shark | 🦍 Gorilla King | 🐉 Nightflame"
+}
+
+local function pegarPetsDoNome(nome)
+    local nomeLower = string.lower(nome)
+    for bioma, lista in pairs(petsPorBioma) do
+        if string.find(nomeLower, bioma) then
+            return lista
+        end
+    end
+    return "❓ Bioma desconhecido"
+end
+
 -- ====== CRIAR INTERFACE ======
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MarinHub"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
 
--- Botão principal "M"
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 52, 0, 52)
 toggleBtn.Position = UDim2.new(0, 20, 0.5, -26)
@@ -62,10 +85,10 @@ toggleStroke.Thickness = 2
 toggleStroke.Transparency = 0.4
 toggleStroke.Parent = toggleBtn
 
--- ====== MENU PRINCIPAL ======
+-- Menu
 local menu = Instance.new("Frame")
 menu.Size = UDim2.new(0, 0, 0, 0)
-menu.Position = UDim2.new(0, 85, 0.5, -190)
+menu.Position = UDim2.new(0, 85, 0.5, -200)
 menu.BackgroundColor3 = COR_FUNDO
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -82,7 +105,7 @@ menuStroke.Thickness = 1.5
 menuStroke.Transparency = 0.5
 menuStroke.Parent = menu
 
--- ====== CABEÇALHO ======
+-- Cabeçalho
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, 60)
 header.BackgroundColor3 = COR_SECAO
@@ -93,7 +116,6 @@ local headerCorner = Instance.new("UICorner")
 headerCorner.CornerRadius = UDim.new(0, 16)
 headerCorner.Parent = header
 
--- Corrigir cantos de baixo do header
 local headerFix = Instance.new("Frame")
 headerFix.Size = UDim2.new(1, 0, 0, 20)
 headerFix.Position = UDim2.new(0, 0, 1, -20)
@@ -101,7 +123,6 @@ headerFix.BackgroundColor3 = COR_SECAO
 headerFix.BorderSizePixel = 0
 headerFix.Parent = header
 
--- Título
 local titulo = Instance.new("TextLabel")
 titulo.Size = UDim2.new(1, -40, 0, 30)
 titulo.Position = UDim2.new(0, 20, 0, 8)
@@ -113,7 +134,6 @@ titulo.Font = Enum.Font.GothamBlack
 titulo.TextXAlignment = Enum.TextXAlignment.Left
 titulo.Parent = header
 
--- Subtítulo
 local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -40, 0, 18)
 subtitulo.Position = UDim2.new(0, 20, 0, 35)
@@ -125,7 +145,6 @@ subtitulo.Font = Enum.Font.Gotham
 subtitulo.TextXAlignment = Enum.TextXAlignment.Left
 subtitulo.Parent = header
 
--- Linha decorativa
 local linha = Instance.new("Frame")
 linha.Size = UDim2.new(1, -40, 0, 1)
 linha.Position = UDim2.new(0, 20, 0, 59)
@@ -134,7 +153,7 @@ linha.BackgroundTransparency = 0.7
 linha.BorderSizePixel = 0
 linha.Parent = header
 
--- ====== CONTAINER DE BOTÕES ======
+-- Container
 local container = Instance.new("Frame")
 container.Size = UDim2.new(1, -24, 1, -80)
 container.Position = UDim2.new(0, 12, 0, 68)
@@ -146,7 +165,7 @@ layout.Padding = UDim.new(0, 8)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = container
 
--- ====== FUNÇÃO CRIAR BOTÃO ======
+-- Função criar botão elegante
 local function criarBotaoElegante(texto, cor, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 42)
@@ -174,7 +193,6 @@ local function criarBotaoElegante(texto, cor, callback)
     padding.PaddingLeft = UDim.new(0, 16)
     padding.Parent = btn
     
-    -- Indicador lateral colorido
     local indicador = Instance.new("Frame")
     indicador.Size = UDim2.new(0, 4, 0, 20)
     indicador.Position = UDim2.new(0, 8, 0.5, -10)
@@ -182,11 +200,10 @@ local function criarBotaoElegante(texto, cor, callback)
     indicador.BorderSizePixel = 0
     indicador.Parent = btn
     
-    local indicadorCorner = Instance.new("UICorner")
-    indicadorCorner.CornerRadius = UDim.new(0, 4)
-    indicadorCorner.Parent = indicador
+    local ic = Instance.new("UICorner")
+    ic.CornerRadius = UDim.new(0, 4)
+    ic.Parent = indicador
     
-    -- Hover
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COR_BOTAO_HOVER}):Play()
         TweenService:Create(stroke, TweenInfo.new(0.15), {Transparency = 0.2}):Play()
@@ -204,9 +221,10 @@ end
 -- ====== ESP EGGS ======
 local function criarESP(objeto)
     if espObjects[objeto] then return end
+    if not objeto:IsA("Model") then return end
     
     local box = Instance.new("BoxHandleAdornment")
-    box.Size = objeto:IsA("Model") and objeto:GetExtentsSize() or objeto.Size
+    box.Size = objeto:GetExtentsSize()
     box.Adornee = objeto
     box.AlwaysOnTop = true
     box.ZIndex = 5
@@ -214,23 +232,24 @@ local function criarESP(objeto)
     box.Color3 = COR_AMARELO
     box.Parent = objeto
     
-    local nome = Instance.new("BillboardGui")
-    nome.Size = UDim2.new(0, 140, 0, 20)
-    nome.StudsOffset = Vector3.new(0, 3, 0)
-    nome.AlwaysOnTop = true
-    nome.Parent = objeto
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 320, 0, 45)
+    billboard.StudsOffset = Vector3.new(0, 4, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = objeto
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = objeto.Name
+    label.Text = "🥚 " .. objeto.Name .. "\n" .. pegarPetsDoNome(objeto.Name)
     label.TextColor3 = COR_AMARELO
     label.TextStrokeTransparency = 0
-    label.TextSize = 14
+    label.TextSize = 11
     label.Font = Enum.Font.GothamBold
-    label.Parent = nome
+    label.TextWrapped = true
+    label.Parent = billboard
     
-    espObjects[objeto] = {box, nome}
+    espObjects[objeto] = {box, billboard}
 end
 
 local function limparESP()
@@ -246,17 +265,18 @@ end
 
 local function atualizarESP()
     if not espAtivo then return end
-    for _, obj in pairs(workspace:GetDescendants()) do
-        if (obj:IsA("Model") or obj:IsA("BasePart")) and not espObjects[obj] then
-            local nome = string.lower(obj.Name)
-            if string.find(nome, "egg") or string.find(nome, "ovo") then
+    
+    for _, obj in pairs(workspace:GetChildren()) do
+        if obj:IsA("Model") and not espObjects[obj] then
+            local nome = obj.Name
+            if string.find(string.lower(nome), "egg") and not string.match(nome, "^%d") then
                 criarESP(obj)
             end
         end
     end
 end
 
--- ====== TELEPORTE TWEEN ======
+-- ====== TELEPORTE ======
 local function fazerTeleporte()
     if teleportando then return end
     teleportando = true
@@ -286,7 +306,7 @@ local function fazerTeleporte()
     print("Teleportado!")
 end
 
--- ====== BOTÕES DO MENU ======
+-- ====== BOTÕES ======
 criarBotaoElegante("📍  Salvar Posição", COR_AZUL, function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -355,15 +375,14 @@ speedBtn = criarBotaoElegante("⚡  Speed: 16", COR_ROXO, function()
     end)
 end)
 
--- ====== ABRIR/FECHAR MENU (com animação) ======
+-- ====== ABRIR/FECHAR MENU ======
 local function animarMenu(abrir)
     if abrir then
         menu.Visible = true
         menu.Size = UDim2.new(0, 0, 0, 0)
-        menu.Position = UDim2.new(0, 85, 0.5, -190)
         
         TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 230, 0, 380)
+            Size = UDim2.new(0, 240, 0, 380)
         }):Play()
     else
         local tween = TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
@@ -381,7 +400,6 @@ toggleBtn.MouseButton1Click:Connect(function()
     animarMenu(menuAberto)
 end)
 
--- Hover do botão M
 toggleBtn.MouseEnter:Connect(function()
     TweenService:Create(toggleStroke, TweenInfo.new(0.15), {Transparency = 0.1}):Play()
 end)
