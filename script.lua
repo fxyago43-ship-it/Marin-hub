@@ -31,8 +31,8 @@ corner.Parent = toggleBtn
 
 -- Frame do menu
 local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 220, 0, 280)
-menu.Position = UDim2.new(0, 80, 0.5, -140)
+menu.Size = UDim2.new(0, 220, 0, 340)
+menu.Position = UDim2.new(0, 80, 0.5, -170)
 menu.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -220,7 +220,26 @@ criarBotao("IrParaOvo", "🥚 Ir Para o Ovo Alvo", Color3.fromRGB(60, 180, 100),
     end
 end)
 
-criarBotao("Gravidade", "🌌 Gravidade: OFF", Color3.fromRGB(100, 60, 180), 240, function(btn)
+criarBotao("Scanner", "🔍 Escanear Ovos", Color3.fromRGB(80, 180, 200), 240, function()
+    print("=== OVOS ENCONTRADOS ===")
+    local encontrados = {}
+    
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") or obj:IsA("BasePart") then
+            local nome = string.lower(obj.Name)
+            if string.find(nome, "egg") or string.find(nome, "ovo") then
+                if not encontrados[obj.Name] then
+                    encontrados[obj.Name] = true
+                    print("🥚", obj.Name)
+                end
+            end
+        end
+    end
+    
+    print("=== FIM DA LISTA ===")
+end)
+
+criarBotao("Gravidade", "🌌 Gravidade: OFF", Color3.fromRGB(100, 60, 180), 285, function(btn)
     gravityOff = not gravityOff
     if gravityOff then
         workspace.Gravity = 0
