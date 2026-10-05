@@ -1,24 +1,25 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB - Steal An Egg
-    Interface Elegante + ESP com Pets
+    MARIN HUB - Steal An Egg v2
+    Interface Elegante + ESP + Target Egg + Tween
     ═══════════════════════════════════════════
 ]]
 
--- ====== SERVIÇOS ======
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- ====== ESTADO GLOBAL ======
+-- ====== ESTADO ======
 local savedPos = nil
 local teleportando = false
 local espAtivo = false
 local speedValue = 16
 local espObjects = {}
 local menuAberto = false
+local ovoSelecionado = nil
+local ovosEncontrados = {}
 
 -- ====== CORES ======
 local COR_FUNDO = Color3.fromRGB(18, 18, 22)
@@ -32,7 +33,7 @@ local COR_AMARELO = Color3.fromRGB(240, 180, 60)
 local COR_ROXO = Color3.fromRGB(150, 90, 220)
 local COR_TEXTO = Color3.fromRGB(240, 240, 240)
 
--- ====== MAPA DE PETS POR BIOMA ======
+-- ====== PETS POR BIOMA ======
 local petsPorBioma = {
     forest = "🐔 Chicken | 🐶 Dog | 🐦 Bird | 🦉 Owl | 🦝 Raccoon | 🐻 Bear | 🦊 Fox | 🐒 Brr Brr",
     lake = "🐸 Frog | 🦆 Duckling | 🐟 Catfish | 🐢 Turtle | 🦢 Swan | 🐉 Trulimero | 🦎 Axolotl | 🐋 Leviathan",
@@ -47,17 +48,25 @@ local petsPorBioma = {
     titan = "🦀 Crustacia | 🕷️ Spideron | 🦎 Bladehide | 🦗 Mantaris | 🦏 Rhinotaur | 🦈 Mutant Shark | 🦍 Gorilla King | 🐉 Nightflame"
 }
 
-local function pegarPetsDoNome(nome)
+local function pegarBioma(nome)
     local nomeLower = string.lower(nome)
-    for bioma, lista in pairs(petsPorBioma) do
+    for bioma, _ in pairs(petsPorBioma) do
         if string.find(nomeLower, bioma) then
-            return lista
+            return bioma
         end
+    end
+    return nil
+end
+
+local function pegarPetsDoNome(nome)
+    local bioma = pegarBioma(nome)
+    if bioma then
+        return petsPorBioma[bioma]
     end
     return "❓ Bioma desconhecido"
 end
 
--- ====== CRIAR INTERFACE ======
+-- ====== INTERFACE ======
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MarinHub"
 screenGui.Parent = CoreGui
@@ -75,35 +84,34 @@ toggleBtn.BorderSizePixel = 0
 toggleBtn.AutoButtonColor = false
 toggleBtn.Parent = screenGui
 
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 14)
-toggleCorner.Parent = toggleBtn
+local tc = Instance.new("UICorner")
+tc.CornerRadius = UDim.new(0, 14)
+tc.Parent = toggleBtn
 
-local toggleStroke = Instance.new("UIStroke")
-toggleStroke.Color = COR_VERDE
-toggleStroke.Thickness = 2
-toggleStroke.Transparency = 0.4
-toggleStroke.Parent = toggleBtn
+local ts = Instance.new("UIStroke")
+ts.Color = COR_VERDE
+ts.Thickness = 2
+ts.Transparency = 0.4
+ts.Parent = toggleBtn
 
--- Menu
 local menu = Instance.new("Frame")
 menu.Size = UDim2.new(0, 0, 0, 0)
-menu.Position = UDim2.new(0, 85, 0.5, -200)
+menu.Position = UDim2.new(0, 85, 0.5, -240)
 menu.BackgroundColor3 = COR_FUNDO
 menu.BorderSizePixel = 0
 menu.Visible = false
 menu.ClipsDescendants = true
 menu.Parent = screenGui
 
-local menuCorner = Instance.new("UICorner")
-menuCorner.CornerRadius = UDim.new(0, 16)
-menuCorner.Parent = menu
+local mc = Instance.new("UICorner")
+mc.CornerRadius = UDim.new(0, 16)
+mc.Parent = menu
 
-local menuStroke = Instance.new("UIStroke")
-menuStroke.Color = COR_VERDE
-menuStroke.Thickness = 1.5
-menuStroke.Transparency = 0.5
-menuStroke.Parent = menu
+local ms = Instance.new("UIStroke")
+ms.Color = COR_VERDE
+ms.Thickness = 1.5
+ms.Transparency = 0.5
+ms.Parent = menu
 
 -- Cabeçalho
 local header = Instance.new("Frame")
@@ -112,16 +120,16 @@ header.BackgroundColor3 = COR_SECAO
 header.BorderSizePixel = 0
 header.Parent = menu
 
-local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 16)
-headerCorner.Parent = header
+local hc = Instance.new("UICorner")
+hc.CornerRadius = UDim.new(0, 16)
+hc.Parent = header
 
-local headerFix = Instance.new("Frame")
-headerFix.Size = UDim2.new(1, 0, 0, 20)
-headerFix.Position = UDim2.new(0, 0, 1, -20)
-headerFix.BackgroundColor3 = COR_SECAO
-headerFix.BorderSizePixel = 0
-headerFix.Parent = header
+local hf = Instance.new("Frame")
+hf.Size = UDim2.new(1, 0, 0, 20)
+hf.Position = UDim2.new(0, 0, 1, -20)
+hf.BackgroundColor3 = COR_SECAO
+hf.BorderSizePixel = 0
+hf.Parent = header
 
 local titulo = Instance.new("TextLabel")
 titulo.Size = UDim2.new(1, -40, 0, 30)
@@ -138,7 +146,7 @@ local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -40, 0, 18)
 subtitulo.Position = UDim2.new(0, 20, 0, 35)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v1.0"
+subtitulo.Text = "Steal An Egg • v2.0"
 subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
 subtitulo.TextSize = 12
 subtitulo.Font = Enum.Font.Gotham
@@ -162,10 +170,9 @@ container.Parent = menu
 
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)
-layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = container
 
--- Função criar botão elegante
+-- Botão elegante
 local function criarBotaoElegante(texto, cor, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 42)
@@ -183,48 +190,47 @@ local function criarBotaoElegante(texto, cor, callback)
     c.CornerRadius = UDim.new(0, 10)
     c.Parent = btn
     
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = cor
-    stroke.Thickness = 1
-    stroke.Transparency = 0.6
-    stroke.Parent = btn
+    local st = Instance.new("UIStroke")
+    st.Color = cor
+    st.Thickness = 1
+    st.Transparency = 0.6
+    st.Parent = btn
     
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 16)
-    padding.Parent = btn
+    local p = Instance.new("UIPadding")
+    p.PaddingLeft = UDim.new(0, 16)
+    p.Parent = btn
     
-    local indicador = Instance.new("Frame")
-    indicador.Size = UDim2.new(0, 4, 0, 20)
-    indicador.Position = UDim2.new(0, 8, 0.5, -10)
-    indicador.BackgroundColor3 = cor
-    indicador.BorderSizePixel = 0
-    indicador.Parent = btn
+    local ind = Instance.new("Frame")
+    ind.Size = UDim2.new(0, 4, 0, 20)
+    ind.Position = UDim2.new(0, 8, 0.5, -10)
+    ind.BackgroundColor3 = cor
+    ind.BorderSizePixel = 0
+    ind.Parent = btn
     
     local ic = Instance.new("UICorner")
     ic.CornerRadius = UDim.new(0, 4)
-    ic.Parent = indicador
+    ic.Parent = ind
     
     btn.MouseEnter:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COR_BOTAO_HOVER}):Play()
-        TweenService:Create(stroke, TweenInfo.new(0.15), {Transparency = 0.2}):Play()
+        TweenService:Create(st, TweenInfo.new(0.15), {Transparency = 0.2}):Play()
     end)
     
     btn.MouseLeave:Connect(function()
         TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COR_BOTAO}):Play()
-        TweenService:Create(stroke, TweenInfo.new(0.15), {Transparency = 0.6}):Play()
+        TweenService:Create(st, TweenInfo.new(0.15), {Transparency = 0.6}):Play()
     end)
     
     btn.MouseButton1Click:Connect(callback)
     return btn
 end
 
--- ====== ESP EGGS ======
+-- ====== ESP ======
 local function criarESP(objeto)
     if espObjects[objeto] then return end
-    if not objeto:IsA("Model") then return end
     
     local box = Instance.new("BoxHandleAdornment")
-    box.Size = objeto:GetExtentsSize()
+    box.Size = objeto:IsA("Model") and objeto:GetExtentsSize() or objeto.Size
     box.Adornee = objeto
     box.AlwaysOnTop = true
     box.ZIndex = 5
@@ -263,15 +269,19 @@ local function limparESP()
     espObjects = {}
 end
 
+local function ehOvo(nome)
+    local n = string.lower(nome)
+    return string.find(n, "firstareaegg") or 
+           string.find(n, "egg_") or
+           (string.find(n, "egg") and string.match(n, "%d%d%d%d"))
+end
+
 local function atualizarESP()
     if not espAtivo then return end
     
-    for _, obj in pairs(workspace:GetChildren()) do
-        if obj:IsA("Model") and not espObjects[obj] then
-            local nome = obj.Name
-            if string.find(string.lower(nome), "egg") and not string.match(nome, "^%d") then
-                criarESP(obj)
-            end
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if (obj:IsA("Model") or obj:IsA("Part")) and not espObjects[obj] and ehOvo(obj.Name) then
+            criarESP(obj)
         end
     end
 end
@@ -303,7 +313,36 @@ local function fazerTeleporte()
     root.AssemblyAngularVelocity = Vector3.zero
     
     teleportando = false
-    print("Teleportado!")
+end
+
+-- Tween até um ovo específico
+local function tweenParaOvo(ovo)
+    local char = LocalPlayer.Character
+    if not char or not ovo then return end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local posOvo
+    if ovo:IsA("Model") then
+        local prim = ovo.PrimaryPart or ovo:FindFirstChildWhichIsA("BasePart")
+        if prim then posOvo = prim.Position end
+    else
+        posOvo = ovo.Position
+    end
+    
+    if not posOvo then return end
+    
+    local distancia = (posOvo - root.Position).Magnitude
+    local duracao = math.clamp(distancia / 80, 0.5, 3)
+    
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    
+    local tweenInfo = TweenInfo.new(duracao, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(posOvo + Vector3.new(0, 3, 0))})
+    tween:Play()
+    tween.Completed:Wait()
 end
 
 -- ====== BOTÕES ======
@@ -315,7 +354,7 @@ criarBotaoElegante("📍  Salvar Posição", COR_AZUL, function()
     end
 end)
 
-criarBotaoElegante("🚀  Teleportar (Tween)", COR_VERMELHO, function()
+criarBotaoElegante("🚀  Teleportar (Safe Zone)", COR_VERMELHO, function()
     fazerTeleporte()
 end)
 
@@ -338,11 +377,100 @@ espBtn = criarBotaoElegante("🥚  ESP Eggs: OFF", COR_AMARELO, function()
     end
 end)
 
+local tweenBtn
+tweenBtn = criarBotaoElegante("🎯  Tween para Ovo", COR_VERDE, function()
+    -- Cria uma janela com a lista de ovos encontrados
+    local janela = Instance.new("Frame")
+    janela.Size = UDim2.new(0, 300, 0, 350)
+    janela.Position = UDim2.new(0.5, -150, 0.5, -175)
+    janela.BackgroundColor3 = COR_FUNDO
+    janela.BorderSizePixel = 0
+    janela.ZIndex = 20
+    janela.Parent = screenGui
+    
+    local jc = Instance.new("UICorner")
+    jc.CornerRadius = UDim.new(0, 12)
+    jc.Parent = janela
+    
+    local jt = Instance.new("TextLabel")
+    jt.Size = UDim2.new(1, 0, 0, 35)
+    jt.BackgroundTransparency = 1
+    jt.Text = "SELECIONE UM OVO"
+    jt.TextColor3 = COR_VERDE
+    jt.TextSize = 15
+    jt.Font = Enum.Font.GothamBold
+    jt.ZIndex = 21
+    jt.Parent = janela
+    
+    local fechar = Instance.new("TextButton")
+    fechar.Size = UDim2.new(0, 30, 0, 30)
+    fechar.Position = UDim2.new(1, -35, 0, 3)
+    fechar.BackgroundColor3 = COR_VERMELHO
+    fechar.Text = "X"
+    fechar.TextColor3 = COR_TEXTO
+    fechar.TextSize = 14
+    fechar.Font = Enum.Font.GothamBold
+    fechar.BorderSizePixel = 0
+    fechar.ZIndex = 21
+    fechar.Parent = janela
+    
+    local fc = Instance.new("UICorner")
+    fc.CornerRadius = UDim.new(0, 8)
+    fc.Parent = fechar
+    
+    fechar.MouseButton1Click:Connect(function()
+        janela:Destroy()
+    end)
+    
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -16, 1, -45)
+    scroll.Position = UDim2.new(0, 8, 0, 40)
+    scroll.BackgroundTransparency = 1
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.ScrollBarThickness = 6
+    scroll.ZIndex = 21
+    scroll.Parent = janela
+    
+    local sl = Instance.new("UIListLayout")
+    sl.Padding = UDim.new(0, 4)
+    sl.Parent = scroll
+    
+    sl.AbsoluteContentSize:Connect(function()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y)
+    end)
+    
+    -- Lista todos os ovos no mapa
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if ehOvo(obj.Name) and (obj:IsA("Model") or obj:IsA("Part")) then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 45)
+            btn.BackgroundColor3 = COR_BOTAO
+            btn.TextColor3 = COR_TEXTO
+            btn.Text = "🥚 " .. obj.Name
+            btn.TextSize = 11
+            btn.Font = Enum.Font.Code
+            btn.BorderSizePixel = 0
+            btn.TextWrapped = true
+            btn.ZIndex = 21
+            btn.Parent = scroll
+            
+            local bc = Instance.new("UICorner")
+            bc.CornerRadius = UDim.new(0, 8)
+            bc.Parent = btn
+            
+            btn.MouseButton1Click:Connect(function()
+                tweenParaOvo(obj)
+                janela:Destroy()
+                print("Tween para:", obj.Name)
+            end)
+        end
+    end
+end)
+
 local speedBtn
 speedBtn = criarBotaoElegante("⚡  Speed: 16", COR_ROXO, function()
     local box = Instance.new("TextBox")
     box.Size = UDim2.new(1, -20, 0, 36)
-    box.Position = UDim2.new(0, 10, 0, 0)
     box.BackgroundColor3 = COR_SECAO
     box.TextColor3 = COR_TEXTO
     box.PlaceholderText = "Digite 1-1000"
@@ -350,17 +478,11 @@ speedBtn = criarBotaoElegante("⚡  Speed: 16", COR_ROXO, function()
     box.Font = Enum.Font.Gotham
     box.TextSize = 14
     box.BorderSizePixel = 0
-    box.ZIndex = 10
     box.Parent = container
     
     local bc = Instance.new("UICorner")
     bc.CornerRadius = UDim.new(0, 8)
     bc.Parent = box
-    
-    local bs = Instance.new("UIStroke")
-    bs.Color = COR_ROXO
-    bs.Thickness = 1.5
-    bs.Parent = box
     
     box:CaptureFocus()
     
@@ -369,29 +491,25 @@ speedBtn = criarBotaoElegante("⚡  Speed: 16", COR_ROXO, function()
         if valor then
             speedValue = math.clamp(valor, 1, 1000)
             speedBtn.Text = "⚡  Speed: " .. speedValue
-            print("Speed definida:", speedValue)
         end
         box:Destroy()
     end)
 end)
 
--- ====== ABRIR/FECHAR MENU ======
+-- ====== MENU ======
 local function animarMenu(abrir)
     if abrir then
         menu.Visible = true
         menu.Size = UDim2.new(0, 0, 0, 0)
-        
-        TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 240, 0, 380)
+        TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {
+            Size = UDim2.new(0, 240, 0, 420)
         }):Play()
     else
-        local tween = TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+        local t = TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
             Size = UDim2.new(0, 0, 0, 0)
         })
-        tween:Play()
-        tween.Completed:Connect(function()
-            menu.Visible = false
-        end)
+        t:Play()
+        t.Completed:Connect(function() menu.Visible = false end)
     end
 end
 
@@ -400,18 +518,8 @@ toggleBtn.MouseButton1Click:Connect(function()
     animarMenu(menuAberto)
 end)
 
-toggleBtn.MouseEnter:Connect(function()
-    TweenService:Create(toggleStroke, TweenInfo.new(0.15), {Transparency = 0.1}):Play()
-end)
-
-toggleBtn.MouseLeave:Connect(function()
-    TweenService:Create(toggleStroke, TweenInfo.new(0.15), {Transparency = 0.4}):Play()
-end)
-
--- ====== ARRASTAR BOTÃO "M" ======
-local dragging = false
-local dragStart, startPos
-
+-- Arrastar
+local dragging, dragStart, startPos
 toggleBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -419,29 +527,23 @@ toggleBtn.InputBegan:Connect(function(input)
         startPos = toggleBtn.Position
     end
 end)
-
 toggleBtn.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.Touch then
         local delta = input.Position - dragStart
         toggleBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-
 toggleBtn.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-    end
+    if input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
--- ====== APLICAR SPEED ======
+-- ====== SPEED ======
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = speedValue
-        end
+        local h = char:FindFirstChildOfClass("Humanoid")
+        if h then h.WalkSpeed = speedValue end
     end
 end)
 
-print("Marin Hub carregado!")
+print("Marin Hub v2 carregado!")
