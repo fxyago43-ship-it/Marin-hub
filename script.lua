@@ -302,7 +302,7 @@ local function fazerTeleporte(destino)
     teleportando = false
 end
 
--- ====== SUBMENU DE ÁREAS ======
+-- ====== SUBMENU DE ÁREAS (CORRIGIDO) ======
 local submenuAberto = false
 local submenuFrame = nil
 
@@ -335,6 +335,7 @@ local function abrirSubmenu()
     ss2.Transparency = 0.5
     ss2.Parent = submenuFrame
     
+    -- Cabeçalho
     local subHeader = Instance.new("Frame")
     subHeader.Size = UDim2.new(1, 0, 0, 50)
     subHeader.BackgroundColor3 = COR_SECAO
@@ -386,6 +387,7 @@ local function abrirSubmenu()
     voltar.Activated:Connect(fecharSubmenu)
     voltar.MouseButton1Click:Connect(fecharSubmenu)
     
+    -- Scroll do submenu
     local subScroll = Instance.new("ScrollingFrame")
     subScroll.Size = UDim2.new(1, -20, 1, -65)
     subScroll.Position = UDim2.new(0, 10, 0, 55)
@@ -393,7 +395,7 @@ local function abrirSubmenu()
     subScroll.BorderSizePixel = 0
     subScroll.ScrollBarThickness = 5
     subScroll.ScrollBarImageColor3 = COR_ROXO
-    subScroll.CanvasSize = UDim2.new(0, 0, 0, 700)
+    subScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
     subScroll.ZIndex = 301
     subScroll.Parent = submenuFrame
     
@@ -402,10 +404,7 @@ local function abrirSubmenu()
     sl.SortOrder = Enum.SortOrder.LayoutOrder
     sl.Parent = subScroll
     
-    sl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 20)
-    end)
-    
+    -- Cria os botões
     for _, area in ipairs(areas) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, -5, 0, 42)
@@ -456,6 +455,10 @@ local function abrirSubmenu()
             status.Text = "✅ Teleportado para " .. area.nome
         end)
     end
+    
+    -- Atualiza CanvasSize depois de criar os botões
+    task.wait(0.1)
+    subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 20)
 end
 
 -- ====== BOTÕES ======
