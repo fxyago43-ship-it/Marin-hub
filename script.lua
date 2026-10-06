@@ -1,8 +1,8 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB v5.3 - Steal An Egg
+    MARIN HUB v5.4 - Steal An Egg
     Interface RGB + Teleporte por Áreas
-    (Eventos corrigidos para Delta mobile)
+    (Botões corrigidos)
     ═══════════════════════════════════════════
 ]]
 
@@ -167,14 +167,14 @@ local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -60, 0, 18)
 subtitulo.Position = UDim2.new(0, 50, 0, 38)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v5.3 (arraste aqui)"
+subtitulo.Text = "Steal An Egg • v5.4 (arraste aqui)"
 subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
 subtitulo.TextSize = 11
 subtitulo.Font = Enum.Font.Gotham
 subtitulo.TextXAlignment = Enum.TextXAlignment.Left
 subtitulo.Parent = header
 
--- Scroll principal
+-- ====== SCROLL PRINCIPAL (CORRIGIDO) ======
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, -20, 1, -80)
 scroll.Position = UDim2.new(0, 10, 0, 72)
@@ -182,7 +182,7 @@ scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
 scroll.ScrollBarThickness = 6
 scroll.ScrollBarImageColor3 = COR_VERDE
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
 scroll.Parent = menu
 
 local layout = Instance.new("UIListLayout")
@@ -190,11 +190,11 @@ layout.Padding = UDim.new(0, 8)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = scroll
 
-layout.AbsoluteContentSize:Connect(function()
-    scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
 end)
 
--- Função criar botão (com Activated)
+-- ====== FUNÇÃO CRIAR BOTÃO ======
 local function criarBotao(texto, cor, callback, parent)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -5, 0, 45)
@@ -234,7 +234,6 @@ local function criarBotao(texto, cor, callback, parent)
     ic.CornerRadius = UDim.new(0, 4)
     ic.Parent = ind
     
-    -- Usa Activated (funciona no Delta mobile)
     btn.Activated:Connect(callback)
     
     return btn
@@ -348,7 +347,7 @@ local function abrirSubmenu()
     subScroll.BorderSizePixel = 0
     subScroll.ScrollBarThickness = 6
     subScroll.ScrollBarImageColor3 = COR_LARANJA
-    subScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    subScroll.CanvasSize = UDim2.new(0, 0, 0, 700)
     subScroll.ZIndex = 31
     subScroll.Parent = submenuFrame
     
@@ -357,8 +356,8 @@ local function abrirSubmenu()
     sl.SortOrder = Enum.SortOrder.LayoutOrder
     sl.Parent = subScroll
     
-    sl.AbsoluteContentSize:Connect(function()
-        subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 10)
+    sl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 20)
     end)
     
     for _, area in ipairs(areas) do
@@ -419,7 +418,7 @@ criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
     end
 end)
 
--- ====== ARRASTAR MENU (COM MouseButton1Down) ======
+-- ====== ARRASTAR MENU ======
 local arrastandoMenu = false
 local inicioX, inicioY
 local posInicial
@@ -473,10 +472,10 @@ toggleBtn.MouseButton1Up:Connect(function()
     arrastandoM = false
 end)
 
--- ====== ABRIR/FECHAR MENU (COM Activated) ======
+-- ====== ABRIR/FECHAR MENU ======
 toggleBtn.Activated:Connect(function()
     menuAberto = not menuAberto
     menu.Visible = menuAberto
 end)
 
-print("Marin Hub v5.3 carregado!")
+print("Marin Hub v5.4 carregado!")
