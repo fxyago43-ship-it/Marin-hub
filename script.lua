@@ -390,4 +390,63 @@ criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
 end)
 
 -- ====== ARRASTAR MENU ======
-local arrast
+local arrastandoMenu = false
+local inicioX, inicioY
+local posInicial
+
+header.MouseButton1Down:Connect(function(x, y)
+    arrastandoMenu = true
+    inicioX = x
+    inicioY = y
+    posInicial = menu.Position
+end)
+
+header.MouseMoved:Connect(function(x, y)
+    if arrastandoMenu then
+        local deltaX = x - inicioX
+        local deltaY = y - inicioY
+        menu.Position = UDim2.new(
+            posInicial.X.Scale, posInicial.X.Offset + deltaX,
+            posInicial.Y.Scale, posInicial.Y.Offset + deltaY
+        )
+    end
+end)
+
+header.MouseButton1Up:Connect(function()
+    arrastandoMenu = false
+end)
+
+-- ====== ARRASTAR BOTÃO ======
+local arrastandoM = false
+local inicioMX, inicioMY
+local posMInicial
+
+toggleBtn.MouseButton1Down:Connect(function(x, y)
+    arrastandoM = true
+    inicioMX = x
+    inicioMY = y
+    posMInicial = toggleBtn.Position
+end)
+
+toggleBtn.MouseMoved:Connect(function(x, y)
+    if arrastandoM then
+        local deltaX = x - inicioMX
+        local deltaY = y - inicioMY
+        toggleBtn.Position = UDim2.new(
+            posMInicial.X.Scale, posMInicial.X.Offset + deltaX,
+            posMInicial.Y.Scale, posMInicial.Y.Offset + deltaY
+        )
+    end
+end)
+
+toggleBtn.MouseButton1Up:Connect(function()
+    arrastandoM = false
+end)
+
+-- ====== ABRIR/FECHAR MENU ======
+toggleBtn.Activated:Connect(function()
+    menuAberto = not menuAberto
+    menu.Visible = menuAberto
+end)
+
+print("Marin Hub v6 carregado!")
