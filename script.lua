@@ -1,8 +1,7 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB v5.4 - Steal An Egg
-    Interface RGB + Teleporte por Áreas
-    (Botões corrigidos)
+    MARIN HUB v6 - Steal An Egg
+    Interface Simples + Teleporte por Áreas
     ═══════════════════════════════════════════
 ]]
 
@@ -59,15 +58,16 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MarinHub"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 
--- Botão "M"
+-- Botão "Marin Hub" (maior pra caber o texto)
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 55, 0, 55)
+toggleBtn.Size = UDim2.new(0, 100, 0, 55)
 toggleBtn.Position = UDim2.new(0, 20, 0.5, -27)
 toggleBtn.BackgroundColor3 = COR_FUNDO
 toggleBtn.TextColor3 = COR_VERDE
-toggleBtn.Text = "M"
-toggleBtn.TextSize = 28
+toggleBtn.Text = "Marin\nHub"
+toggleBtn.TextSize = 16
 toggleBtn.Font = Enum.Font.GothamBlack
 toggleBtn.BorderSizePixel = 0
 toggleBtn.AutoButtonColor = false
@@ -80,24 +80,14 @@ tc.Parent = toggleBtn
 
 local ts = Instance.new("UIStroke")
 ts.Color = COR_VERDE
-ts.Thickness = 2.5
-ts.Transparency = 0.2
+ts.Thickness = 2
+ts.Transparency = 0.3
 ts.Parent = toggleBtn
-
-task.spawn(function()
-    while toggleBtn.Parent do
-        for hue = 0, 1, 0.01 do
-            if not toggleBtn.Parent then break end
-            ts.Color = Color3.fromHSV(hue, 1, 1)
-            task.wait(0.02)
-        end
-    end
-end)
 
 -- ====== MENU PRINCIPAL ======
 local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 270, 0, 380)
-menu.Position = UDim2.new(0, 90, 0.5, -190)
+menu.Size = UDim2.new(0, 280, 0, 400)
+menu.Position = UDim2.new(0, 130, 0.5, -200)
 menu.BackgroundColor3 = COR_FUNDO
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -110,19 +100,9 @@ mc.Parent = menu
 
 local ms = Instance.new("UIStroke")
 ms.Color = COR_VERDE
-ms.Thickness = 2
-ms.Transparency = 0.2
+ms.Thickness = 1.5
+ms.Transparency = 0.4
 ms.Parent = menu
-
-task.spawn(function()
-    while menu.Parent do
-        for hue = 0, 1, 0.01 do
-            if not menu.Parent then break end
-            ms.Color = Color3.fromHSV(hue, 1, 1)
-            task.wait(0.02)
-        end
-    end
-end)
 
 -- Cabeçalho
 local header = Instance.new("Frame")
@@ -143,18 +123,9 @@ hf.BackgroundColor3 = COR_SECAO
 hf.BorderSizePixel = 0
 hf.Parent = header
 
-local icone = Instance.new("TextLabel")
-icone.Size = UDim2.new(0, 30, 0, 30)
-icone.Position = UDim2.new(0, 15, 0, 10)
-icone.BackgroundTransparency = 1
-icone.Text = "🎮"
-icone.TextSize = 22
-icone.Font = Enum.Font.GothamBold
-icone.Parent = header
-
 local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, -60, 0, 30)
-titulo.Position = UDim2.new(0, 50, 0, 10)
+titulo.Size = UDim2.new(1, -30, 0, 30)
+titulo.Position = UDim2.new(0, 15, 0, 10)
 titulo.BackgroundTransparency = 1
 titulo.Text = "MARIN HUB"
 titulo.TextColor3 = COR_VERDE
@@ -164,17 +135,17 @@ titulo.TextXAlignment = Enum.TextXAlignment.Left
 titulo.Parent = header
 
 local subtitulo = Instance.new("TextLabel")
-subtitulo.Size = UDim2.new(1, -60, 0, 18)
-subtitulo.Position = UDim2.new(0, 50, 0, 38)
+subtitulo.Size = UDim2.new(1, -30, 0, 18)
+subtitulo.Position = UDim2.new(0, 15, 0, 38)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v5.4 (arraste aqui)"
+subtitulo.Text = "Steal An Egg • v6.0"
 subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
 subtitulo.TextSize = 11
 subtitulo.Font = Enum.Font.Gotham
 subtitulo.TextXAlignment = Enum.TextXAlignment.Left
 subtitulo.Parent = header
 
--- ====== SCROLL PRINCIPAL (CORRIGIDO) ======
+-- Scroll principal
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, -20, 1, -80)
 scroll.Position = UDim2.new(0, 10, 0, 72)
@@ -194,7 +165,7 @@ layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
 end)
 
--- ====== FUNÇÃO CRIAR BOTÃO ======
+-- Função criar botão
 local function criarBotao(texto, cor, callback, parent)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -5, 0, 45)
@@ -305,8 +276,8 @@ local function abrirSubmenu()
     
     local ss = Instance.new("UIStroke")
     ss.Color = COR_LARANJA
-    ss.Thickness = 2
-    ss.Transparency = 0.2
+    ss.Thickness = 1.5
+    ss.Transparency = 0.4
     ss.Parent = submenuFrame
     
     local tit = Instance.new("TextLabel")
@@ -419,63 +390,4 @@ criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
 end)
 
 -- ====== ARRASTAR MENU ======
-local arrastandoMenu = false
-local inicioX, inicioY
-local posInicial
-
-header.MouseButton1Down:Connect(function(x, y)
-    arrastandoMenu = true
-    inicioX = x
-    inicioY = y
-    posInicial = menu.Position
-end)
-
-header.MouseMoved:Connect(function(x, y)
-    if arrastandoMenu then
-        local deltaX = x - inicioX
-        local deltaY = y - inicioY
-        menu.Position = UDim2.new(
-            posInicial.X.Scale, posInicial.X.Offset + deltaX,
-            posInicial.Y.Scale, posInicial.Y.Offset + deltaY
-        )
-    end
-end)
-
-header.MouseButton1Up:Connect(function()
-    arrastandoMenu = false
-end)
-
--- ====== ARRASTAR BOTÃO M ======
-local arrastandoM = false
-local inicioMX, inicioMY
-local posMInicial
-
-toggleBtn.MouseButton1Down:Connect(function(x, y)
-    arrastandoM = true
-    inicioMX = x
-    inicioMY = y
-    posMInicial = toggleBtn.Position
-end)
-
-toggleBtn.MouseMoved:Connect(function(x, y)
-    if arrastandoM then
-        local deltaX = x - inicioMX
-        local deltaY = y - inicioMY
-        toggleBtn.Position = UDim2.new(
-            posMInicial.X.Scale, posMInicial.X.Offset + deltaX,
-            posMInicial.Y.Scale, posMInicial.Y.Offset + deltaY
-        )
-    end
-end)
-
-toggleBtn.MouseButton1Up:Connect(function()
-    arrastandoM = false
-end)
-
--- ====== ABRIR/FECHAR MENU ======
-toggleBtn.Activated:Connect(function()
-    menuAberto = not menuAberto
-    menu.Visible = menuAberto
-end)
-
-print("Marin Hub v5.4 carregado!")
+local arrast
