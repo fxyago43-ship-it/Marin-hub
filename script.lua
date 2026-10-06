@@ -1,6 +1,6 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB - Tween Ultra Rápido
+    MARIN HUB - Tween Ultra Rápido + Áreas
     Interface com Abrir/Minimizar
     ═══════════════════════════════════════════
 ]]
@@ -17,8 +17,26 @@ for _, v in pairs(CoreGui:GetChildren()) do
     end
 end
 
+-- ====== ÁREAS ======
+local areas = {
+    {nome = "🌲 Forest",            pos = Vector3.new(596, 71, -375)},
+    {nome = "🌊 Lake",              pos = Vector3.new(715, 71, -365)},
+    {nome = "🏜️ Desert",            pos = Vector3.new(942, 71, -336)},
+    {nome = "🌴 Jungle",            pos = Vector3.new(1192, 71, -395)},
+    {nome = "❄️ Snow",              pos = Vector3.new(1492, 71, -329)},
+    {nome = "🌋 Volcano",           pos = Vector3.new(1878, 71, -383)},
+    {nome = "🌊 Abyss Ocean",       pos = Vector3.new(2279, 71, -344)},
+    {nome = "🦕 Prehistoric",       pos = Vector3.new(2814, 71, -385)},
+    {nome = "🌌 Cosmic",            pos = Vector3.new(3394, 71, -341)},
+    {nome = "🌸 Cherry Blossom",    pos = Vector3.new(4028, 71, -382)},
+    {nome = "🏛️ Titan Temple",      pos = Vector3.new(4796, 71, -344)},
+    {nome = "⚔️ Angels vs Demons",  pos = Vector3.new(5667, 71, -355)},
+    {nome = "✨ Enchanted Forest",  pos = Vector3.new(6695, 71, -368)},
+}
+
 -- ====== ESTADO ======
 local safePos = nil
+local teleportando = false
 
 -- ====== CORES ======
 local COR_FUNDO = Color3.fromRGB(22, 22, 28)
@@ -41,8 +59,8 @@ screenGui.DisplayOrder = 999999
 
 -- ====== JANELA PRINCIPAL ======
 local janela = Instance.new("Frame")
-janela.Size = UDim2.new(0, 300, 0, 260)
-janela.Position = UDim2.new(0.5, -150, 0.5, -130)
+janela.Size = UDim2.new(0, 320, 0, 320)
+janela.Position = UDim2.new(0.5, -160, 0.5, -160)
 janela.BackgroundColor3 = COR_FUNDO
 janela.BorderSizePixel = 0
 janela.ClipsDescendants = true
@@ -92,7 +110,7 @@ local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -120, 0, 14)
 subtitulo.Position = UDim2.new(0, 20, 0, 32)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Tween Ultra Rápido"
+subtitulo.Text = "Tween + Áreas"
 subtitulo.TextColor3 = COR_SUBTEXTO
 subtitulo.TextSize = 10
 subtitulo.Font = Enum.Font.Gotham
@@ -135,7 +153,7 @@ local bfc = Instance.new("UICorner")
 bfc.CornerRadius = UDim.new(0, 8)
 bfc.Parent = btnFechar
 
--- Botão Reabrir (flutuante quando minimiza)
+-- Botão Reabrir
 local btnAbrir = Instance.new("TextButton")
 btnAbrir.Size = UDim2.new(0, 120, 0, 45)
 btnAbrir.Position = UDim2.new(0, 20, 0.5, -22)
@@ -161,16 +179,24 @@ bas.Transparency = 0.3
 bas.Parent = btnAbrir
 
 -- ====== CONTEÚDO ======
-local conteudo = Instance.new("Frame")
+local conteudo = Instance.new("ScrollingFrame")
 conteudo.Size = UDim2.new(1, -20, 1, -70)
 conteudo.Position = UDim2.new(0, 10, 0, 63)
 conteudo.BackgroundTransparency = 1
+conteudo.BorderSizePixel = 0
+conteudo.ScrollBarThickness = 5
+conteudo.ScrollBarImageColor3 = COR_VERDE
+conteudo.CanvasSize = UDim2.new(0, 0, 0, 500)
 conteudo.Parent = janela
 
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = conteudo
+
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    conteudo.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+end)
 
 -- Função criar botão
 local function criarBotao(texto, cor, callback)
@@ -231,6 +257,207 @@ local sc = Instance.new("UICorner")
 sc.CornerRadius = UDim.new(0, 8)
 sc.Parent = status
 
+-- ====== TWEEN (INTACTO) ======
+local function fazerTeleporte(destino)
+    if teleportando then return end
+    teleportando = true
+    
+    if not destino then
+        teleportando = false
+        return
+    end
+    
+    local char = LocalPlayer.Character
+    if not char then teleportando = false return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not root or not humanoid then teleportando = false return end
+    
+    -- 🛡️ God Mode
+    humanoid.MaxHealth = math.huge
+    humanoid.Health = math.huge
+    
+    -- 🛡️ Sem colisão
+    root.CanCollide = false
+    
+    -- 🛡️ Zera velocidade
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    
+    -- ⚡ TWEEN ULTRA RÁPIDO: 0.01 segundos
+    local tweenInfo = TweenInfo.new(0.01, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local cframeFinal = typeof(destino) == "Vector3" and CFrame.new(destino) or destino
+    local tween = TweenService:Create(root, tweenInfo, {CFrame = cframeFinal})
+    tween:Play()
+    tween.Completed:Wait()
+    
+    -- Restaura após 0.5s
+    task.wait(0.5)
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    root.CanCollide = true
+    humanoid.MaxHealth = 100
+    humanoid.Health = 100
+    
+    teleportando = false
+end
+
+-- ====== SUBMENU DE ÁREAS ======
+local submenuAberto = false
+local submenuFrame = nil
+
+local function fecharSubmenu()
+    if submenuFrame then
+        submenuFrame:Destroy()
+        submenuFrame = nil
+    end
+    submenuAberto = false
+end
+
+local function abrirSubmenu()
+    submenuAberto = true
+    
+    submenuFrame = Instance.new("Frame")
+    submenuFrame.Size = UDim2.new(0, 280, 0, 420)
+    submenuFrame.Position = UDim2.new(0.5, -140, 0.5, -210)
+    submenuFrame.BackgroundColor3 = COR_FUNDO
+    submenuFrame.BorderSizePixel = 0
+    submenuFrame.ZIndex = 300
+    submenuFrame.Parent = screenGui
+    
+    local sc2 = Instance.new("UICorner")
+    sc2.CornerRadius = UDim.new(0, 16)
+    sc2.Parent = submenuFrame
+    
+    local ss2 = Instance.new("UIStroke")
+    ss2.Color = COR_ROXO
+    ss2.Thickness = 1.5
+    ss2.Transparency = 0.5
+    ss2.Parent = submenuFrame
+    
+    local subHeader = Instance.new("Frame")
+    subHeader.Size = UDim2.new(1, 0, 0, 50)
+    subHeader.BackgroundColor3 = COR_SECAO
+    subHeader.BorderSizePixel = 0
+    subHeader.ZIndex = 301
+    subHeader.Parent = submenuFrame
+    
+    local shc = Instance.new("UICorner")
+    shc.CornerRadius = UDim.new(0, 16)
+    shc.Parent = subHeader
+    
+    local shf = Instance.new("Frame")
+    shf.Size = UDim2.new(1, 0, 0, 15)
+    shf.Position = UDim2.new(0, 0, 1, -15)
+    shf.BackgroundColor3 = COR_SECAO
+    shf.BorderSizePixel = 0
+    shf.ZIndex = 301
+    shf.Parent = subHeader
+    
+    local tit = Instance.new("TextLabel")
+    tit.Size = UDim2.new(1, -100, 0, 30)
+    tit.Position = UDim2.new(0, 15, 0, 10)
+    tit.BackgroundTransparency = 1
+    tit.Text = "🗺️ ESCOLHER ÁREA"
+    tit.TextColor3 = COR_ROXO
+    tit.TextSize = 14
+    tit.Font = Enum.Font.GothamBold
+    tit.TextXAlignment = Enum.TextXAlignment.Left
+    tit.ZIndex = 302
+    tit.Parent = subHeader
+    
+    local voltar = Instance.new("TextButton")
+    voltar.Size = UDim2.new(0, 75, 0, 30)
+    voltar.Position = UDim2.new(1, -85, 0, 10)
+    voltar.BackgroundColor3 = COR_AZUL
+    voltar.Text = "← Voltar"
+    voltar.TextColor3 = COR_TEXTO
+    voltar.TextSize = 12
+    voltar.Font = Enum.Font.GothamBold
+    voltar.BorderSizePixel = 0
+    voltar.Active = true
+    voltar.ZIndex = 302
+    voltar.Parent = subHeader
+    
+    local vc = Instance.new("UICorner")
+    vc.CornerRadius = UDim.new(0, 8)
+    vc.Parent = voltar
+    
+    voltar.Activated:Connect(fecharSubmenu)
+    voltar.MouseButton1Click:Connect(fecharSubmenu)
+    
+    local subScroll = Instance.new("ScrollingFrame")
+    subScroll.Size = UDim2.new(1, -20, 1, -65)
+    subScroll.Position = UDim2.new(0, 10, 0, 55)
+    subScroll.BackgroundTransparency = 1
+    subScroll.BorderSizePixel = 0
+    subScroll.ScrollBarThickness = 5
+    subScroll.ScrollBarImageColor3 = COR_ROXO
+    subScroll.CanvasSize = UDim2.new(0, 0, 0, 700)
+    subScroll.ZIndex = 301
+    subScroll.Parent = submenuFrame
+    
+    local sl = Instance.new("UIListLayout")
+    sl.Padding = UDim.new(0, 6)
+    sl.SortOrder = Enum.SortOrder.LayoutOrder
+    sl.Parent = subScroll
+    
+    sl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 20)
+    end)
+    
+    for _, area in ipairs(areas) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -5, 0, 42)
+        btn.BackgroundColor3 = COR_BOTAO
+        btn.TextColor3 = COR_TEXTO
+        btn.Text = "   " .. area.nome
+        btn.TextSize = 13
+        btn.Font = Enum.Font.GothamMedium
+        btn.BorderSizePixel = 0
+        btn.AutoButtonColor = false
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.Active = true
+        btn.ZIndex = 302
+        btn.Parent = subScroll
+        
+        local bc = Instance.new("UICorner")
+        bc.CornerRadius = UDim.new(0, 8)
+        bc.Parent = btn
+        
+        local barra = Instance.new("Frame")
+        barra.Size = UDim2.new(0, 3, 0, 22)
+        barra.Position = UDim2.new(0, 10, 0.5, -11)
+        barra.BackgroundColor3 = COR_ROXO
+        barra.BorderSizePixel = 0
+        barra.ZIndex = 303
+        barra.Parent = btn
+        
+        local barc = Instance.new("UICorner")
+        barc.CornerRadius = UDim.new(0, 3)
+        barc.Parent = barra
+        
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = COR_HOVER}):Play()
+        end)
+        
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = COR_BOTAO}):Play()
+        end)
+        
+        btn.Activated:Connect(function()
+            fazerTeleporte(area.pos)
+            fecharSubmenu()
+            status.Text = "✅ Teleportado para " .. area.nome
+        end)
+        btn.MouseButton1Click:Connect(function()
+            fazerTeleporte(area.pos)
+            fecharSubmenu()
+            status.Text = "✅ Teleportado para " .. area.nome
+        end)
+    end
+end
+
 -- ====== BOTÕES ======
 criarBotao("📍 Salvar Safe Zone", COR_AZUL, function()
     local char = LocalPlayer.Character
@@ -247,40 +474,17 @@ criarBotao("⚡ Tween Ultra Rápido", COR_VERMELHO, function()
         status.TextColor3 = COR_VERMELHO
         return
     end
-    
-    local char = LocalPlayer.Character
-    if not char then return end
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid then return end
-    
-    -- 🛡️ God Mode
-    humanoid.MaxHealth = math.huge
-    humanoid.Health = math.huge
-    
-    -- 🛡️ Sem colisão
-    root.CanCollide = false
-    
-    -- 🛡️ Zera velocidade
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-    
-    -- ⚡ TWEEN ULTRA RÁPIDO: 0.01 segundos
-    local tweenInfo = TweenInfo.new(0.01, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(root, tweenInfo, {CFrame = safePos})
-    tween:Play()
-    tween.Completed:Wait()
-    
-    -- Restaura após 0.5s
-    task.wait(0.5)
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-    root.CanCollide = true
-    humanoid.MaxHealth = 100
-    humanoid.Health = 100
-    
+    fazerTeleporte(safePos)
     status.Text = "✅ Teleportado!"
     status.TextColor3 = COR_VERDE
+end)
+
+criarBotao("🗺️ Escolher Área", COR_ROXO, function()
+    if submenuAberto then
+        fecharSubmenu()
+    else
+        abrirSubmenu()
+    end
 end)
 
 -- ====== MINIMIZAR / ABRIR ======
@@ -288,7 +492,6 @@ btnMin.MouseButton1Click:Connect(function()
     janela.Visible = false
     btnAbrir.Visible = true
 end)
-
 btnMin.Activated:Connect(function()
     janela.Visible = false
     btnAbrir.Visible = true
@@ -298,7 +501,6 @@ btnAbrir.MouseButton1Click:Connect(function()
     janela.Visible = true
     btnAbrir.Visible = false
 end)
-
 btnAbrir.Activated:Connect(function()
     janela.Visible = true
     btnAbrir.Visible = false
@@ -308,7 +510,6 @@ end)
 btnFechar.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
-
 btnFechar.Activated:Connect(function()
     screenGui:Destroy()
 end)
@@ -340,4 +541,4 @@ barraTitulo.MouseButton1Up:Connect(function()
     arrastandoJanela = false
 end)
 
-print("Marin Hub - Tween Ultra Rápido carregado!")
+print("Marin Hub - Tween + Áreas carregado!")
