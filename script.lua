@@ -1,7 +1,7 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB v4 - Steal An Egg
-    Teleporte por Áreas + Speed + Menu Arrastável
+    MARIN HUB v5.1 - Steal An Egg
+    Interface RGB + Teleporte por Áreas
     ═══════════════════════════════════════════
 ]]
 
@@ -37,12 +37,11 @@ local areas = {
 }
 
 -- ====== ESTADO ======
-local savedPos = nil
+local safePos = nil
 local teleportando = false
-local speedAtivo = false
-local speedValor = 16
 local menuAberto = false
 local submenuAberto = false
+local submenuFrame = nil
 
 -- ====== CORES ======
 local COR_FUNDO = Color3.fromRGB(18, 18, 22)
@@ -52,7 +51,6 @@ local COR_BOTAO_HOVER = Color3.fromRGB(60, 60, 75)
 local COR_VERDE = Color3.fromRGB(0, 220, 130)
 local COR_VERMELHO = Color3.fromRGB(230, 70, 70)
 local COR_AZUL = Color3.fromRGB(70, 130, 230)
-local COR_ROXO = Color3.fromRGB(150, 90, 220)
 local COR_LARANJA = Color3.fromRGB(240, 140, 60)
 local COR_TEXTO = Color3.fromRGB(240, 240, 240)
 
@@ -64,12 +62,12 @@ screenGui.ResetOnSpawn = false
 
 -- Botão "M"
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 52, 0, 52)
-toggleBtn.Position = UDim2.new(0, 20, 0.5, -26)
+toggleBtn.Size = UDim2.new(0, 55, 0, 55)
+toggleBtn.Position = UDim2.new(0, 20, 0.5, -27)
 toggleBtn.BackgroundColor3 = COR_FUNDO
 toggleBtn.TextColor3 = COR_VERDE
 toggleBtn.Text = "M"
-toggleBtn.TextSize = 26
+toggleBtn.TextSize = 28
 toggleBtn.Font = Enum.Font.GothamBlack
 toggleBtn.BorderSizePixel = 0
 toggleBtn.AutoButtonColor = false
@@ -81,14 +79,24 @@ tc.Parent = toggleBtn
 
 local ts = Instance.new("UIStroke")
 ts.Color = COR_VERDE
-ts.Thickness = 2
-ts.Transparency = 0.4
+ts.Thickness = 2.5
+ts.Transparency = 0.2
 ts.Parent = toggleBtn
 
--- Menu principal
+task.spawn(function()
+    while toggleBtn.Parent do
+        for hue = 0, 1, 0.01 do
+            if not toggleBtn.Parent then break end
+            ts.Color = Color3.fromHSV(hue, 1, 1)
+            task.wait(0.02)
+        end
+    end
+end)
+
+-- ====== MENU PRINCIPAL ======
 local menu = Instance.new("Frame")
 menu.Size = UDim2.new(0, 0, 0, 0)
-menu.Position = UDim2.new(0, 85, 0.5, -200)
+menu.Position = UDim2.new(0, 90, 0.5, -220)
 menu.BackgroundColor3 = COR_FUNDO
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -101,13 +109,23 @@ mc.Parent = menu
 
 local ms = Instance.new("UIStroke")
 ms.Color = COR_VERDE
-ms.Thickness = 1.5
-ms.Transparency = 0.5
+ms.Thickness = 2
+ms.Transparency = 0.2
 ms.Parent = menu
+
+task.spawn(function()
+    while menu.Parent do
+        for hue = 0, 1, 0.01 do
+            if not menu.Parent then break end
+            ms.Color = Color3.fromHSV(hue, 1, 1)
+            task.wait(0.02)
+        end
+    end
+end)
 
 -- Cabeçalho
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 60)
+header.Size = UDim2.new(1, 0, 0, 65)
 header.BackgroundColor3 = COR_SECAO
 header.BorderSizePixel = 0
 header.Parent = menu
@@ -123,9 +141,18 @@ hf.BackgroundColor3 = COR_SECAO
 hf.BorderSizePixel = 0
 hf.Parent = header
 
+local icone = Instance.new("TextLabel")
+icone.Size = UDim2.new(0, 30, 0, 30)
+icone.Position = UDim2.new(0, 15, 0, 10)
+icone.BackgroundTransparency = 1
+icone.Text = "🎮"
+icone.TextSize = 22
+icone.Font = Enum.Font.GothamBold
+icone.Parent = header
+
 local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, -40, 0, 30)
-titulo.Position = UDim2.new(0, 20, 0, 8)
+titulo.Size = UDim2.new(1, -60, 0, 30)
+titulo.Position = UDim2.new(0, 50, 0, 10)
 titulo.BackgroundTransparency = 1
 titulo.Text = "MARIN HUB"
 titulo.TextColor3 = COR_VERDE
@@ -135,31 +162,40 @@ titulo.TextXAlignment = Enum.TextXAlignment.Left
 titulo.Parent = header
 
 local subtitulo = Instance.new("TextLabel")
-subtitulo.Size = UDim2.new(1, -40, 0, 18)
-subtitulo.Position = UDim2.new(0, 20, 0, 35)
+subtitulo.Size = UDim2.new(1, -60, 0, 18)
+subtitulo.Position = UDim2.new(0, 50, 0, 38)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v4.0 (arraste aqui)"
+subtitulo.Text = "Steal An Egg • v5.1 (arraste aqui)"
 subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
 subtitulo.TextSize = 11
 subtitulo.Font = Enum.Font.Gotham
 subtitulo.TextXAlignment = Enum.TextXAlignment.Left
 subtitulo.Parent = header
 
--- Container principal
-local container = Instance.new("Frame")
-container.Size = UDim2.new(1, -24, 1, -80)
-container.Position = UDim2.new(0, 12, 0, 68)
-container.BackgroundTransparency = 1
-container.Parent = menu
+-- Scroll principal
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -20, 1, -80)
+scroll.Position = UDim2.new(0, 10, 0, 72)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 6
+scroll.ScrollBarImageColor3 = COR_VERDE
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.Parent = menu
 
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)
-layout.Parent = container
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = scroll
+
+layout.AbsoluteContentSize:Connect(function()
+    scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+end)
 
 -- Função criar botão
 local function criarBotao(texto, cor, callback, parent)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 42)
+    btn.Size = UDim2.new(1, -5, 0, 45)
     btn.BackgroundColor3 = COR_BOTAO
     btn.TextColor3 = COR_TEXTO
     btn.Text = texto
@@ -168,7 +204,7 @@ local function criarBotao(texto, cor, callback, parent)
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.Parent = parent or container
+    btn.Parent = parent or scroll
     
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 10)
@@ -185,8 +221,8 @@ local function criarBotao(texto, cor, callback, parent)
     p.Parent = btn
     
     local ind = Instance.new("Frame")
-    ind.Size = UDim2.new(0, 4, 0, 20)
-    ind.Position = UDim2.new(0, 8, 0.5, -10)
+    ind.Size = UDim2.new(0, 4, 0, 22)
+    ind.Position = UDim2.new(0, 8, 0.5, -11)
     ind.BackgroundColor3 = cor
     ind.BorderSizePixel = 0
     ind.Parent = btn
@@ -209,136 +245,191 @@ local function criarBotao(texto, cor, callback, parent)
     return btn
 end
 
--- ====== FUNÇÃO DE TELEPORTE ======
-local function teleportarPara(posFinal, ultraRapido)
+-- ====== FUNÇÃO TELEPORTE (INTACTA) ======
+local function fazerTeleporte(destino)
     if teleportando then return end
     teleportando = true
     
-    local char = LocalPlayer.Character
-    if not char then teleportando = false return end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid then 
-        teleportando = false 
-        return 
+    if not destino then
+        teleportando = false
+        return
     end
     
-    -- 🛡️ God Mode
-    local maxHealthOriginal = humanoid.MaxHealth
-    local healthOriginal = humanoid.Health
+    local char = LocalPlayer.Character
+    if not char then teleportando = false return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if not root or not humanoid then teleportando = false return end
+    
     humanoid.MaxHealth = math.huge
     humanoid.Health = math.huge
     
-    -- 🛡️ Sem colisão
-    local colisaoOriginal = root.CanCollide
     root.CanCollide = false
     
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
-    task.wait(0.1)
     
-    if ultraRapido then
-        -- ⚡ ULTRA RÁPIDO (0.01s)
-        local tweenInfo = TweenInfo.new(0.01, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-        local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(posFinal)})
-        tween:Play()
-        tween.Completed:Wait()
-    else
-        -- 🐢 SUAVE (proporcional à distância)
-        local distancia = (posFinal - root.Position).Magnitude
-        local duracao = math.clamp(distancia / 80, 0.5, 2.5)
-        
-        local tweenInfo = TweenInfo.new(duracao, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
-        local tween = TweenService:Create(root, tweenInfo, {CFrame = CFrame.new(posFinal)})
-        tween:Play()
-        tween.Completed:Wait()
-    end
+    local tweenInfo = TweenInfo.new(0.01, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    local cframeFinal = typeof(destino) == "Vector3" and CFrame.new(destino) or destino
+    local tween = TweenService:Create(root, tweenInfo, {CFrame = cframeFinal})
+    tween:Play()
+    tween.Completed:Wait()
     
-    -- Restaura
-    task.wait(0.1)
+    task.wait(0.5)
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
-    root.CanCollide = colisaoOriginal
-    
-    humanoid.MaxHealth = maxHealthOriginal
-    humanoid.Health = math.min(healthOriginal, maxHealthOriginal)
+    root.CanCollide = true
+    humanoid.MaxHealth = 100
+    humanoid.Health = 100
     
     teleportando = false
 end
 
--- ====== BOTÕES PRINCIPAIS ======
-criarBotao("📍  Salvar Posição", COR_AZUL, function()
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        savedPos = char.HumanoidRootPart.Position
+-- ====== SUBMENU DE ÁREAS ======
+local function fecharSubmenu()
+    if submenuFrame then
+        submenuFrame:Destroy()
+        submenuFrame = nil
     end
-end)
+    submenuAberto = false
+end
 
-criarBotao("🚀  Teleportar (Safe Zone)", COR_VERMELHO, function()
-    if savedPos then
-        teleportarPara(savedPos, false)
-    end
-end)
-
--- Botão de Áreas (abre submenu)
-local areasBtn
-areasBtn = criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
-    submenuAberto = not submenuAberto
+local function abrirSubmenu()
+    submenuAberto = true
     
-    if submenuAberto then
-        -- Mostra as áreas
-        for _, area in ipairs(areas) do
-            local btn = criarBotao(area.nome, COR_LARANJA, function()
-                teleportarPara(area.pos, false)
-            end)
-            btn.Name = "AreaBtn"
-        end
-    else
-        -- Remove as áreas
-        for _, child in pairs(container:GetChildren()) do
-            if child.Name == "AreaBtn" then
-                child:Destroy()
-            end
-        end
-    end
-end)
-
--- Speed
-local speedBtn
-speedBtn = criarBotao("⚡  Speed: OFF", COR_ROXO, function()
-    speedAtivo = not speedAtivo
-    if speedAtivo then
-        speedBtn.Text = "⚡  Speed: " .. speedValor
-        
-        local box = Instance.new("TextBox")
-        box.Size = UDim2.new(1, -20, 0, 36)
-        box.BackgroundColor3 = COR_SECAO
-        box.TextColor3 = COR_TEXTO
-        box.PlaceholderText = "Velocidade (1-300)"
-        box.Text = tostring(speedValor)
-        box.Font = Enum.Font.Gotham
-        box.TextSize = 14
-        box.BorderSizePixel = 0
-        box.Parent = container
+    submenuFrame = Instance.new("Frame")
+    submenuFrame.Size = UDim2.new(0, 280, 0, 420)
+    submenuFrame.Position = UDim2.new(0.5, -140, 0.5, -210)
+    submenuFrame.BackgroundColor3 = COR_FUNDO
+    submenuFrame.BorderSizePixel = 0
+    submenuFrame.ZIndex = 30
+    submenuFrame.Parent = screenGui
+    
+    local sc = Instance.new("UICorner")
+    sc.CornerRadius = UDim.new(0, 16)
+    sc.Parent = submenuFrame
+    
+    local ss = Instance.new("UIStroke")
+    ss.Color = COR_LARANJA
+    ss.Thickness = 2
+    ss.Transparency = 0.2
+    ss.Parent = submenuFrame
+    
+    local tit = Instance.new("TextLabel")
+    tit.Size = UDim2.new(1, -80, 0, 35)
+    tit.Position = UDim2.new(0, 15, 0, 5)
+    tit.BackgroundTransparency = 1
+    tit.Text = "🗺️ ESCOLHER ÁREA"
+    tit.TextColor3 = COR_LARANJA
+    tit.TextSize = 14
+    tit.Font = Enum.Font.GothamBold
+    tit.TextXAlignment = Enum.TextXAlignment.Left
+    tit.ZIndex = 31
+    tit.Parent = submenuFrame
+    
+    -- Botão Voltar
+    local voltar = Instance.new("TextButton")
+    voltar.Size = UDim2.new(0, 70, 0, 28)
+    voltar.Position = UDim2.new(1, -80, 0, 6)
+    voltar.BackgroundColor3 = COR_AZUL
+    voltar.Text = "← Voltar"
+    voltar.TextColor3 = COR_TEXTO
+    voltar.TextSize = 12
+    voltar.Font = Enum.Font.GothamBold
+    voltar.BorderSizePixel = 0
+    voltar.ZIndex = 31
+    voltar.Parent = submenuFrame
+    
+    local vc = Instance.new("UICorner")
+    vc.CornerRadius = UDim.new(0, 8)
+    vc.Parent = voltar
+    
+    voltar.MouseButton1Click:Connect(fecharSubmenu)
+    
+    -- Scroll do submenu
+    local subScroll = Instance.new("ScrollingFrame")
+    subScroll.Size = UDim2.new(1, -20, 1, -50)
+    subScroll.Position = UDim2.new(0, 10, 0, 40)
+    subScroll.BackgroundTransparency = 1
+    subScroll.BorderSizePixel = 0
+    subScroll.ScrollBarThickness = 6
+    subScroll.ScrollBarImageColor3 = COR_LARANJA
+    subScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    subScroll.ZIndex = 31
+    subScroll.Parent = submenuFrame
+    
+    local sl = Instance.new("UIListLayout")
+    sl.Padding = UDim.new(0, 6)
+    sl.SortOrder = Enum.SortOrder.LayoutOrder
+    sl.Parent = subScroll
+    
+    sl.AbsoluteContentSize:Connect(function()
+        subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 10)
+    end)
+    
+    -- Botão pra cada área
+    for _, area in ipairs(areas) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -5, 0, 40)
+        btn.BackgroundColor3 = COR_BOTAO
+        btn.TextColor3 = COR_TEXTO
+        btn.Text = area.nome
+        btn.TextSize = 13
+        btn.Font = Enum.Font.GothamMedium
+        btn.BorderSizePixel = 0
+        btn.AutoButtonColor = false
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.ZIndex = 32
+        btn.Parent = subScroll
         
         local bc = Instance.new("UICorner")
         bc.CornerRadius = UDim.new(0, 8)
-        bc.Parent = box
+        bc.Parent = btn
         
-        box:CaptureFocus()
+        local bs = Instance.new("UIStroke")
+        bs.Color = COR_LARANJA
+        bs.Thickness = 1
+        bs.Transparency = 0.5
+        bs.Parent = btn
         
-        box.FocusLost:Connect(function()
-            local valor = tonumber(box.Text)
-            if valor then
-                speedValor = math.clamp(valor, 1, 300)
-                speedBtn.Text = "⚡  Speed: " .. speedValor
-            end
-            box:Destroy()
+        local bp = Instance.new("UIPadding")
+        bp.PaddingLeft = UDim.new(0, 12)
+        bp.Parent = btn
+        
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = COR_BOTAO_HOVER}):Play()
         end)
+        
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = COR_BOTAO}):Play()
+        end)
+        
+        btn.MouseButton1Click:Connect(function()
+            fazerTeleporte(area.pos)
+            fecharSubmenu()
+        end)
+    end
+end
+
+-- ====== BOTÕES PRINCIPAIS ======
+criarBotao("📍  Salvar Safe Zone", COR_AZUL, function()
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        safePos = char.HumanoidRootPart.CFrame
+    end
+end)
+
+criarBotao("⚡  TWEEN ULTRA RÁPIDO", COR_VERMELHO, function()
+    if safePos then
+        fazerTeleporte(safePos)
+    end
+end)
+
+criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
+    if submenuAberto then
+        fecharSubmenu()
     else
-        speedBtn.Text = "⚡  Speed: OFF"
-        speedValor = 16
+        abrirSubmenu()
     end
 end)
 
@@ -398,13 +489,13 @@ toggleBtn.InputEnded:Connect(function(input)
     end
 end)
 
--- ====== MENU ======
+-- ====== ABRIR/FECHAR MENU ======
 local function animarMenu(abrir)
     if abrir then
         menu.Visible = true
         menu.Size = UDim2.new(0, 0, 0, 0)
         TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {
-            Size = UDim2.new(0, 260, 0, 320)
+            Size = UDim2.new(0, 270, 0, 380)
         }):Play()
     else
         local t = TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
@@ -420,26 +511,4 @@ toggleBtn.MouseButton1Click:Connect(function()
     animarMenu(menuAberto)
 end)
 
--- ====== SPEED COM BUNNY HOP ======
-RunService.RenderStepped:Connect(function()
-    if not speedAtivo then return end
-    
-    local char = LocalPlayer.Character
-    if not char then return end
-    
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid then return end
-    
-    local moveDir = humanoid.MoveDirection
-    if moveDir.Magnitude > 0 then
-        root.AssemblyLinearVelocity = Vector3.new(
-            moveDir.X * speedValor,
-            root.AssemblyLinearVelocity.Y,
-            moveDir.Z * speedValor
-        )
-        humanoid.Jump = true
-    end
-end)
-
-print("Marin Hub v4 carregado!")
+print("Marin Hub v5.1 carregado!")
