@@ -1,22 +1,25 @@
 --[[
     ============================================================
-    SISTEMA DE TELEPORTE COM TWEEN + GUI MOBILE
-    Botão flutuante "MH" arrastável + Painel Marin Kitagawa
+    SISTEMA DE TELEPORTE COM TWEEN + GUI MOBILE ARRASTÁVEL
+    - Botão flutuante "MH" arrastável (canto da tela)
+    - Painel principal arrastável pela barra superior
+    - Sem backdrop: a GUI NÃO fecha ao tocar fora
+    - Fecha SOMENTE pelo botão ✕ ou pelo ícone MH
     ============================================================
     Estrutura:
       1. CONFIG          -> Constantes ajustáveis
-      2. UTILS           -> Funções auxiliares (tween, corner, etc.)
+      2. UTILS           -> Funções auxiliares
       3. STORAGE         -> Salvar/limpar posição
       4. TWEEN SYSTEM    -> Movimento suave do personagem
-      5. GUI             -> Ícone "MH" + Painel principal
-      6. CONTROLLER      -> Liga GUI aos sistemas (mobile-first)
+      5. DRAG            -> Sistema de arrastar (touch-first)
+      6. GUI             -> Ícone "MH" + Painel principal
+      7. CONTROLLER      -> Liga GUI aos sistemas
     ============================================================
 --]]
 
 local Players           = game:GetService("Players")
 local TweenService      = game:GetService("TweenService")
 local UserInputService  = game:GetService("UserInputService")
-local GuiService        = game:GetService("GuiService")
 
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
@@ -46,14 +49,18 @@ local CONFIG = {
     },
     Font            = Enum.Font.GothamBold,
     FontRegular     = Enum.Font.Gotham,
-    BackgroundImage = "rbxassetid://13164337291", -- troque pelo seu asset
+    BackgroundImage = "rbxassetid://13164337291", -- troque pelo seu
 
     -- Mobile sizing
-    FloatingBtnSize = 56,     -- diâmetro do ícone "MH" (touch target mínimo = 44px)
-    PanelWidth      = 320,    -- largura do painel
-    PanelHeight     = 450,    -- altura do painel
-    ButtonHeight    = 50,     -- altura dos botões (touch-friendly)
-    ButtonGap       = 12,     -- espaçamento entre botões
+    FloatingBtnSize = 56,
+    PanelWidth      = 320,
+    PanelHeight     = 450,
+    HeaderHeight    = 130,   -- área arrastável no topo do painel
+    ButtonHeight    = 50,
+    ButtonGap       = 12,
+
+    -- Margem mínima entre o painel e as bordas da tela
+    ScreenMargin    = 8,
 }
 
 --=============================================================
@@ -105,14 +112,6 @@ function Utils.padding(parent, all)
     p.PaddingRight  = UDim.new(0, all)
     p.Parent = parent
     return p
-end
-
--- Retorna o tamanho útil da tela (viewport) descontando a safe area
-function Utils.getSafeViewport()
-    local cam = workspace.CurrentCamera
-    local vp = cam.ViewportSize
-    local topLeft = GuiService:GetGuiInset()
-    return vp, topLeft
 end
 
 --=============================================================
@@ -194,18 +193,134 @@ function TweenSystem.moveToSaved(useMoveTo)
 end
 
 --=============================================================
--- 5. GUI
+-- 5. DRAG SYSTEM (touch-first, genérico)
+--=============================================================
+--[[
+    Torna um GuiObject arrastável.
+
+    - Arrasta APENAS quando o toque começa no objeto "handle" (ex.: header).
+    - Usa limiar de pixels para diferenciar tap de drag.
+    - Se o toque sair do objeto durante o arrasto, o movimento continua até soltar.
+    - Clampa a posição dentro dos limites do ScreenGui.
+
+    handle   : GuiObject que captura o toque (ex.: barra superior)
+    target   : GuiObject que será movido (ex.: painel inteiro)
+    onTap    : (opcional) callback disparado quando foi apenas um toque
+    bounds   : (opcional) GuiObject de referência (default: ScreenGui do target)
+--]]
+local Drag = {}
+
+function Drag.makeDraggable(handle, target, onTap, bounds)
+    local TAP_THRESHOLD = 6  -- pixels
+    local dragging = false
+    local moved = false
+    local dragStart, startPos, startTargetPos
+
+    -- Usa AbsolutePosition/AbsoluteSize para clamping preciso
+    local function clampPosition(newPos)
+        local screen = bounds or target.Parent
+        local screenSize = screen.AbsoluteSize
+        local targetSize = target.AbsoluteSize
+        local margin = CONFIG.ScreenMargin
+
+        local maxX = math.max(margin, screenSize.X - targetSize.X - margin)
+        local maxY = math.max(margin, screenSize.Y - targetSize.Y - margin)
+
+        local x = math.clamp(newPos.X.Offset, margin, maxX)
+        local y = math.clamp(newPos.Y.Offset, margin, maxY)
+
+        return UDim2.new(0, x, 0, y)
+    end
+
+    local function beginDrag(input)
+        dragging = true
+        moved = false
+        dragStart = input.Position
+        startTargetPos = target.Position
+
+        -- Efeito visual suave ao pegar
+        Utils.tween(target, 0.1, { BackgroundTransparency = 0.06 })
+    end
+
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        if delta.Magnitude > TAP_THRESHOLD then
+            moved = true
+        end
+        if moved then
+            local newPos = UDim2.new(
+                startTargetPos.X.Scale,
+                startTargetPos.X.Offset + delta.X,
+                startTargetPos.Y.Scale,
+                startTargetPos.Y.Offset + delta.Y
+            )
+            target.Position = clampPosition(newPos)
+        end
+    end
+
+    local function endDrag(input)
+        if not dragging then return end
+        dragging = false
+        Utils.tween(target, 0.15, { BackgroundTransparency = 0.12 })
+
+        if not moved and onTap then
+            onTap(input)
+        end
+    end
+
+    -- InputBegan: inicia o arrasto se o toque começou no handle
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.Touch
+        and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+            return
+        end
+        beginDrag(input)
+    end)
+
+    -- InputChanged: continua o arrasto mesmo se o toque sair do handle
+    handle.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateDrag(input)
+        end
+    end)
+
+    -- InputEnded: finaliza ao soltar
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            endDrag(input)
+        end
+    end)
+
+    -- Segurança: se por algum motivo o input se perder, usamos
+    -- UserInputService como fallback global para encerrar o arrasto.
+    UserInputService.InputEnded:Connect(function(input, gameProcessed)
+        if dragging and (input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1) then
+            dragging = false
+            Utils.tween(target, 0.15, { BackgroundTransparency = 0.12 })
+        end
+    end)
+
+    return {
+        isDragging = function() return dragging end,
+    }
+end
+
+--=============================================================
+-- 6. GUI
 --=============================================================
 local GUI = {}
 
 -------------------------------------------------------------
--- 5a. Botão flutuante "MH" arrastável
+-- 6a. Botão flutuante "MH"
 -------------------------------------------------------------
 local function makeFloatingButton(parent)
     local btn = Instance.new("TextButton")
     btn.Name = "MH_FloatingButton"
     btn.AnchorPoint = Vector2.new(0.5, 0.5)
-    -- Posição inicial: canto superior direito, levemente abaixo do topo
     btn.Position = UDim2.new(1, -50, 0, 120)
     btn.Size = UDim2.new(0, CONFIG.FloatingBtnSize, 0, CONFIG.FloatingBtnSize)
     btn.BackgroundColor3 = CONFIG.Theme.Primary
@@ -222,7 +337,6 @@ local function makeFloatingButton(parent)
     Utils.stroke(btn, CONFIG.Theme.Accent, 2, 0.25)
     Utils.gradient(btn, CONFIG.Theme.Primary, CONFIG.Theme.Secondary, 45)
 
-    -- Brilho interno circular
     local glow = Instance.new("Frame")
     glow.Name = "Glow"
     glow.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -238,60 +352,8 @@ local function makeFloatingButton(parent)
     return btn
 end
 
--- Retorna uma função de "setupDrag" para tornar um GuiObject arrastável
-local function makeDraggable(btn, onTap)
-    local dragging = false
-    local dragStart, startPos, moved
-    local TAP_THRESHOLD = 8  -- pixels para considerar como tap (mobile touch tem ruído)
-
-    local function update(input)
-        local delta = input.Position - dragStart
-        btn.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
-    end
-
-    btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            moved = false
-            dragStart = input.Position
-            startPos  = btn.Position
-
-            -- pequena animação de "apertar"
-            Utils.tween(btn, 0.12, { Size = UDim2.new(0, CONFIG.FloatingBtnSize - 6, 0, CONFIG.FloatingBtnSize - 6) })
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                    Utils.tween(btn, 0.15, { Size = UDim2.new(0, CONFIG.FloatingBtnSize, 0, CONFIG.FloatingBtnSize) })
-                    if not moved and onTap then
-                        onTap()
-                    end
-                end
-            end)
-        end
-    end)
-
-    btn.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-            local delta = (input.Position - dragStart).Magnitude
-            if delta > TAP_THRESHOLD then
-                moved = true
-            end
-            if moved then
-                update(input)
-            end
-        end
-    end)
-end
-
 -------------------------------------------------------------
--- 5b. Painel principal
+-- 6b. Botão do painel
 -------------------------------------------------------------
 local function makeButton(parent, text, order, color)
     local btn = Instance.new("TextButton")
@@ -311,7 +373,6 @@ local function makeButton(parent, text, order, color)
     Utils.stroke(btn, CONFIG.Theme.Accent, 1, 0.55)
     Utils.gradient(btn, color or CONFIG.Theme.Primary, CONFIG.Theme.Secondary, 90)
 
-    -- Hover (desktop) + Press (mobile)
     btn.MouseEnter:Connect(function()
         Utils.tween(btn, 0.15, {
             Size = UDim2.new(1, 4, 0, CONFIG.ButtonHeight + 2),
@@ -334,8 +395,10 @@ local function makeButton(parent, text, order, color)
     return btn
 end
 
+-------------------------------------------------------------
+-- 6c. Construtor principal
+-------------------------------------------------------------
 function GUI.build()
-    -- limpa instância antiga
     local old = PlayerGui:FindFirstChild(CONFIG.ScreenGuiName)
     if old then old:Destroy() end
 
@@ -347,27 +410,12 @@ function GUI.build()
     gui.Parent = PlayerGui
 
     -----------------------------------------------------------
-    -- Fundo escurecido (backdrop) quando painel aberto
-    -----------------------------------------------------------
-    local backdrop = Instance.new("TextButton")
-    backdrop.Name = "Backdrop"
-    backdrop.Size = UDim2.new(1, 0, 1, 0)
-    backdrop.BackgroundColor3 = Color3.new(0, 0, 0)
-    backdrop.BackgroundTransparency = 1
-    backdrop.Text = ""
-    backdrop.AutoButtonColor = false
-    backdrop.ZIndex = 50
-    backdrop.Visible = false
-    backdrop.Parent = gui
-
-    -----------------------------------------------------------
-    -- Painel principal
+    -- Painel principal (posição inicial central)
     -----------------------------------------------------------
     local panel = Instance.new("Frame")
     panel.Name = "MainPanel"
     panel.AnchorPoint = Vector2.new(0.5, 0.5)
     panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-    -- Tamanho adaptativo: no máximo 90% da largura da tela
     panel.Size = UDim2.new(0, CONFIG.PanelWidth, 0, CONFIG.PanelHeight)
     panel.BackgroundColor3 = CONFIG.Theme.Background
     panel.BackgroundTransparency = 0.12
@@ -379,18 +427,18 @@ function GUI.build()
     Utils.stroke(panel, CONFIG.Theme.Primary, 2, 0.3)
 
     -----------------------------------------------------------
-    -- Cabeçalho com arte da Marin
+    -- HEADER (barra superior = área arrastável)
     -----------------------------------------------------------
     local header = Instance.new("Frame")
     header.Name = "Header"
-    header.Size = UDim2.new(1, 0, 0, 130)
+    header.Size = UDim2.new(1, 0, 0, CONFIG.HeaderHeight)
     header.BackgroundColor3 = CONFIG.Theme.PanelBg
     header.BorderSizePixel = 0
     header.ZIndex = 61
     header.Parent = panel
     Utils.corner(header, 18)
 
-    -- tapa o canto inferior arredondado do header
+    -- tapa o canto inferior do header (para não arredondar embaixo)
     local headerFix = Instance.new("Frame")
     headerFix.Size = UDim2.new(1, 0, 0, 20)
     headerFix.Position = UDim2.new(0, 0, 1, -20)
@@ -420,7 +468,7 @@ function GUI.build()
     Utils.gradient(overlay, Color3.new(0, 0, 0), CONFIG.Theme.Primary, 90)
 
     local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -24, 0, 30)
+    title.Size = UDim2.new(1, -80, 0, 30)
     title.Position = UDim2.new(0, 16, 0, 70)
     title.BackgroundTransparency = 1
     title.Text = "MARIN TELEPORT"
@@ -435,7 +483,7 @@ function GUI.build()
     subtitle.Size = UDim2.new(1, -24, 0, 18)
     subtitle.Position = UDim2.new(0, 16, 0, 100)
     subtitle.BackgroundTransparency = 1
-    subtitle.Text = "Sistema de retorno por Tween"
+    subtitle.Text = "Arraste a barra superior para mover"
     subtitle.TextColor3 = CONFIG.Theme.Accent
     subtitle.TextSize = 12
     subtitle.Font = CONFIG.FontRegular
@@ -443,11 +491,26 @@ function GUI.build()
     subtitle.ZIndex = 65
     subtitle.Parent = header
 
-    -- Botão fechar (touch-friendly)
+    -- Indicador visual de "segure para arrastar"
+    local dragHint = Instance.new("TextLabel")
+    dragHint.Name = "DragHint"
+    dragHint.AnchorPoint = Vector2.new(1, 0)
+    dragHint.Position = UDim2.new(1, -12, 0, 8)
+    dragHint.Size = UDim2.new(0, 60, 0, 16)
+    dragHint.BackgroundTransparency = 1
+    dragHint.Text = "⠿  mover"
+    dragHint.TextColor3 = CONFIG.Theme.Accent
+    dragHint.TextSize = 11
+    dragHint.Font = CONFIG.Font
+    dragHint.TextXAlignment = Enum.TextXAlignment.Right
+    dragHint.ZIndex = 66
+    dragHint.Parent = header
+
+    -- Botão fechar (fica no header, na frente do drag)
     local closeBtn = Instance.new("TextButton")
     closeBtn.Name = "Close"
     closeBtn.AnchorPoint = Vector2.new(1, 0)
-    closeBtn.Position = UDim2.new(1, -12, 0, 12)
+    closeBtn.Position = UDim2.new(1, -12, 0, 30)
     closeBtn.Size = UDim2.new(0, 36, 0, 36)
     closeBtn.BackgroundColor3 = CONFIG.Theme.Background
     closeBtn.BackgroundTransparency = 0.25
@@ -462,12 +525,12 @@ function GUI.build()
     Utils.stroke(closeBtn, CONFIG.Theme.Accent, 1, 0.4)
 
     -----------------------------------------------------------
-    -- Corpo
+    -- Corpo (abaixo do header)
     -----------------------------------------------------------
     local body = Instance.new("Frame")
     body.Name = "Body"
-    body.Position = UDim2.new(0, 0, 0, 130)
-    body.Size = UDim2.new(1, 0, 1, -130)
+    body.Position = UDim2.new(0, 0, 0, CONFIG.HeaderHeight)
+    body.Size = UDim2.new(1, 0, 1, -CONFIG.HeaderHeight)
     body.BackgroundTransparency = 1
     body.ZIndex = 62
     body.Parent = panel
@@ -478,7 +541,7 @@ function GUI.build()
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = body
 
-    -- Status indicador
+    -- Status
     local status = Instance.new("Frame")
     status.Name = "Status"
     status.Size = UDim2.new(1, 0, 0, 44)
@@ -511,12 +574,10 @@ function GUI.build()
     statusText.TextTruncate = Enum.TextTruncate.AtEnd
     statusText.Parent = status
 
-    -- Botões principais
     local btnSave  = makeButton(body, "💾  Salvar Local", 2, CONFIG.Theme.Primary)
     local btnTween = makeButton(body, "✨  Tween para Local", 3, CONFIG.Theme.Secondary)
     local btnClear = makeButton(body, "🗑  Limpar Local", 4, Color3.fromRGB(120, 40, 70))
 
-    -- Separador
     local sep = Instance.new("Frame")
     sep.Size = UDim2.new(1, 0, 0, 1)
     sep.BackgroundColor3 = CONFIG.Theme.Primary
@@ -525,11 +586,10 @@ function GUI.build()
     sep.LayoutOrder = 5
     sep.Parent = body
 
-    -- Dica
     local info = Instance.new("TextLabel")
     info.Size = UDim2.new(1, 0, 0, 32)
     info.BackgroundTransparency = 1
-    info.Text = "Toque nos botões para salvar, mover ou limpar."
+    info.Text = "Arraste ⠿ para mover • ✕ ou MH para fechar"
     info.TextColor3 = CONFIG.Theme.TextDim
     info.TextSize = 12
     info.Font = CONFIG.FontRegular
@@ -547,7 +607,6 @@ function GUI.build()
         panel       = panel,
         header      = header,
         body        = body,
-        backdrop    = backdrop,
         floatingBtn = floatingBtn,
         closeBtn    = closeBtn,
         statusDot   = statusDot,
@@ -559,7 +618,7 @@ function GUI.build()
 end
 
 --=============================================================
--- 6. CONTROLLER
+-- 7. CONTROLLER
 --=============================================================
 local Controller = {}
 
@@ -581,50 +640,64 @@ function Controller.flashStatus(ui, msg, color)
     task.delay(1.6, function() Controller.updateStatus(ui) end)
 end
 
--- Ajusta o tamanho do painel caso a tela seja muito pequena
+-- Ajusta tamanho do painel para caber na tela (mantém posição atual)
 function Controller.adaptPanel(ui)
     local cam = workspace.CurrentCamera
     local vp = cam.ViewportSize
     local w = math.min(CONFIG.PanelWidth, vp.X * 0.9)
     local h = math.min(CONFIG.PanelHeight, vp.Y * 0.85)
     ui.panel.Size = UDim2.new(0, w, 0, h)
-
-    -- Recalcula corpo do painel
-    ui.body.Position = UDim2.new(0, 0, 0, 130)
-    ui.body.Size = UDim2.new(1, 0, 1, -130)
 end
 
--- Abre o painel com animação suave
+-- Garante que o painel fique visível após resize/rotação
+function Controller.clampPanel(ui)
+    local cam = workspace.CurrentCamera
+    local vp = cam.ViewportSize
+    local pos = ui.panel.AbsolutePosition
+    local size = ui.panel.AbsoluteSize
+    local margin = CONFIG.ScreenMargin
+
+    local x = math.clamp(pos.X, margin, math.max(margin, vp.X - size.X - margin))
+    local y = math.clamp(pos.Y, margin, math.max(margin, vp.Y - size.Y - margin))
+
+    ui.panel.Position = UDim2.new(0, x, 0, y)
+end
+
+-- Abre com animação de escala
 function Controller.openPanel(ui)
     if ui.panel.Visible then return end
 
-    ui.backdrop.Visible = true
-    ui.panel.Visible = true
+    -- Garante que o tamanho está adaptado
+    Controller.adaptPanel(ui)
 
-    -- Estado inicial: encolhido e transparente
+    -- Mantém a posição anterior se houver, senão centraliza
+    if not ui.panel.Position or ui.panel.Position.X.Scale == 0.5 then
+        ui.panel.AnchorPoint = Vector2.new(0.5, 0.5)
+        ui.panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+    else
+        ui.panel.AnchorPoint = Vector2.new(0, 0)
+    end
+
+    local targetSize = ui.panel.Size
+    ui.panel.Visible = true
     ui.panel.Size = UDim2.new(0, 0, 0, 0)
     ui.panel.BackgroundTransparency = 1
 
-    -- Backdrop aparece
-    Utils.tween(ui.backdrop, 0.25, { BackgroundTransparency = 0.45 })
-
-    -- Painel cresce até o tamanho alvo
-    local cam = workspace.CurrentCamera
-    local vp = cam.ViewportSize
-    local w = math.min(CONFIG.PanelWidth, vp.X * 0.9)
-    local h = math.min(CONFIG.PanelHeight, vp.Y * 0.85)
-
     Utils.tween(ui.panel, 0.28, {
-        Size = UDim2.new(0, w, 0, h),
+        Size = targetSize,
         BackgroundTransparency = 0.12,
     }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
+    -- Reclampa após a animação
+    task.delay(0.3, function()
+        Controller.clampPanel(ui)
+    end)
 end
 
--- Fecha o painel com animação suave
+-- Fecha com animação de encolhimento
 function Controller.closePanel(ui)
     if not ui.panel.Visible then return end
 
-    Utils.tween(ui.backdrop, 0.2, { BackgroundTransparency = 1 })
     Utils.tween(ui.panel, 0.2, {
         Size = UDim2.new(0, 0, 0, 0),
         BackgroundTransparency = 1,
@@ -632,7 +705,6 @@ function Controller.closePanel(ui)
 
     task.delay(0.22, function()
         ui.panel.Visible = false
-        ui.backdrop.Visible = false
     end)
 end
 
@@ -647,22 +719,28 @@ end
 function Controller.init()
     local ui = GUI.build()
 
-    -- Torna o botão flutuante arrastável; tap abre/fecha o painel
-    makeDraggable(ui.floatingBtn, function()
-        Controller.togglePanel(ui)
-    end)
+    ---------------------------------------------------------
+    -- Arrastar o PAINEL pela barra superior (header)
+    ---------------------------------------------------------
+    Drag.makeDraggable(ui.header, ui.panel, nil, ui.gui)
 
-    -- Fechar pelo botão X
+    ---------------------------------------------------------
+    -- Arrastar o BOTÃO FLUTUANTE "MH" (tap = abre/fecha)
+    ---------------------------------------------------------
+    Drag.makeDraggable(ui.floatingBtn, ui.floatingBtn, function()
+        Controller.togglePanel(ui)
+    end, ui.gui)
+
+    ---------------------------------------------------------
+    -- Fechar SOMENTE pelo X ou pelo MH (já tratado no onTap)
+    ---------------------------------------------------------
     ui.closeBtn.MouseButton1Click:Connect(function()
         Controller.closePanel(ui)
     end)
 
-    -- Tocar no backdrop também fecha
-    ui.backdrop.MouseButton1Click:Connect(function()
-        Controller.closePanel(ui)
-    end)
-
-    -- Salvar
+    ---------------------------------------------------------
+    -- Botões internos
+    ---------------------------------------------------------
     ui.btnSave.MouseButton1Click:Connect(function()
         local ok, err = Storage.save()
         if ok then
@@ -673,7 +751,6 @@ function Controller.init()
         Controller.updateStatus(ui)
     end)
 
-    -- Tween para local
     ui.btnTween.MouseButton1Click:Connect(function()
         -- Fecha o painel para liberar a tela durante o movimento
         Controller.closePanel(ui)
@@ -684,30 +761,35 @@ function Controller.init()
         end
     end)
 
-    -- Limpar
     ui.btnClear.MouseButton1Click:Connect(function()
         Storage.clear()
         Controller.flashStatus(ui, "🗑 Posição removida", CONFIG.Theme.Accent)
         Controller.updateStatus(ui)
     end)
 
-    -- Adapta ao tamanho da tela e a mudanças de resolução/orientação
+    ---------------------------------------------------------
+    -- Adaptação a resize / rotação
+    ---------------------------------------------------------
     Controller.adaptPanel(ui)
+
     workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
         Controller.adaptPanel(ui)
-        if not ui.panel.Visible then
-            -- Recalcula posição do botão flutuante para não sair da tela
-            local vp = workspace.CurrentCamera.ViewportSize
-            local pos = ui.floatingBtn.AbsolutePosition
-            local x = math.clamp(pos.X, 30, vp.X - 30)
-            local y = math.clamp(pos.Y, 30, vp.Y - 30)
-            ui.floatingBtn.Position = UDim2.new(0, x, 0, y)
+        if ui.panel.Visible then
+            Controller.clampPanel(ui)
         end
+        -- Reclampa o botão flutuante também
+        local vp = workspace.CurrentCamera.ViewportSize
+        local pos = ui.floatingBtn.AbsolutePosition
+        local size = ui.floatingBtn.AbsoluteSize
+        local x = math.clamp(pos.X, CONFIG.ScreenMargin,
+            math.max(CONFIG.ScreenMargin, vp.X - size.X - CONFIG.ScreenMargin))
+        local y = math.clamp(pos.Y, CONFIG.ScreenMargin,
+            math.max(CONFIG.ScreenMargin, vp.Y - size.Y - CONFIG.ScreenMargin))
+        ui.floatingBtn.Position = UDim2.new(0, x, 0, y)
     end)
 
     Controller.updateStatus(ui)
 
-    -- Atualiza status ao respawnar
     LocalPlayer.CharacterAdded:Connect(function()
         task.wait(0.5)
         Controller.updateStatus(ui)
