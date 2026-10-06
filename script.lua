@@ -1,13 +1,14 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB v6 - Steal An Egg
-    Interface Simples + Teleporte por Áreas
+    MARIN HUB v6.1 - Steal An Egg
+    Interface Simples + Touch Universal
     ═══════════════════════════════════════════
 ]]
 
 -- ====== SERVIÇOS ======
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
@@ -60,9 +61,9 @@ screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 
--- Botão "Marin Hub" (maior pra caber o texto)
+-- Botão "Marin Hub"
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 100, 0, 55)
+toggleBtn.Size = UDim2.new(0, 110, 0, 55)
 toggleBtn.Position = UDim2.new(0, 20, 0.5, -27)
 toggleBtn.BackgroundColor3 = COR_FUNDO
 toggleBtn.TextColor3 = COR_VERDE
@@ -87,7 +88,7 @@ ts.Parent = toggleBtn
 -- ====== MENU PRINCIPAL ======
 local menu = Instance.new("Frame")
 menu.Size = UDim2.new(0, 280, 0, 400)
-menu.Position = UDim2.new(0, 130, 0.5, -200)
+menu.Position = UDim2.new(0, 140, 0.5, -200)
 menu.BackgroundColor3 = COR_FUNDO
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -138,7 +139,7 @@ local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -30, 0, 18)
 subtitulo.Position = UDim2.new(0, 15, 0, 38)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v6.0"
+subtitulo.Text = "Steal An Egg • v6.1"
 subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
 subtitulo.TextSize = 11
 subtitulo.Font = Enum.Font.Gotham
@@ -205,7 +206,9 @@ local function criarBotao(texto, cor, callback, parent)
     ic.CornerRadius = UDim.new(0, 4)
     ic.Parent = ind
     
+    -- Usa Activated E MouseButton1Click (redundância)
     btn.Activated:Connect(callback)
+    btn.MouseButton1Click:Connect(callback)
     
     return btn
 end
@@ -310,6 +313,7 @@ local function abrirSubmenu()
     vc.Parent = voltar
     
     voltar.Activated:Connect(fecharSubmenu)
+    voltar.MouseButton1Click:Connect(fecharSubmenu)
     
     local subScroll = Instance.new("ScrollingFrame")
     subScroll.Size = UDim2.new(1, -20, 1, -50)
@@ -364,6 +368,10 @@ local function abrirSubmenu()
             fazerTeleporte(area.pos)
             fecharSubmenu()
         end)
+        btn.MouseButton1Click:Connect(function()
+            fazerTeleporte(area.pos)
+            fecharSubmenu()
+        end)
     end
 end
 
@@ -389,49 +397,72 @@ criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
     end
 end)
 
--- ====== ARRASTAR MENU ======
-local arrastandoMenu = false
-local inicioX, inicioY
-local posInicial
+-- ====== SISTEMA DE TOQUE UNIVERSAL ======
+-- Captura QUALQUER toque na tela e verifica se foi no botão
 
-header.MouseButton1Down:Connect(function(x, y)
-    arrastandoMenu = true
-    inicioX = x
-    inicioY = y
-    posInicial = menu.Position
+local toqueIniciado = false
+local toqueX, toqueY = 0, 0
+local ultimoToque = 0
+
+UserInputService.InputBegan:Connect(function(input, processado)
+    if processado then return end
+    if input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    local agora = tick()
+    if agora - ultimoToque < 0.3 then return end -- evita duplo toque
+    
+    toqueX = input.Position.X
+    toqueY = input.Position.Y
+    toqueIniciado = true
 end)
 
-header.MouseMoved:Connect(function(x, y)
-    if arrastandoMenu then
-        local deltaX = x - inicioX
-        local deltaY = y - inicioY
-        menu.Position = UDim2.new(
-            posInicial.X.Scale, posInicial.X.Offset + deltaX,
-            posInicial.Y.Scale, posInicial.Y.Offset + deltaY
-        )
+UserInputService.InputEnded:Connect(function(input, processado)
+    if not toqueIniciado then return end
+    if input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    toqueIniciado = false
+    
+    local fimX = input.Position.X
+    local fimY = input.Position.Y
+    
+    -- Verifica se foi um TAP (não foi arrastar)
+    local dist = math.sqrt((fimX - toqueX)^2 + (fimY - toqueY)^2)
+    if dist > 15 then return end -- foi arrastar, ignora
+    
+    -- Verifica se tocou no botão "Marin Hub"
+    local btnPos = toggleBtn.AbsolutePosition
+    local btnSize = toggleBtn.AbsoluteSize
+    
+    if toqueX >= btnPos.X and toqueX <= btnPos.X + btnSize.X 
+       and toqueY >= btnPos.Y and toqueY <= btnPos.Y + btnSize.Y then
+        -- Tocou no botão!
+        menuAberto = not menuAberto
+        menu.Visible = menuAberto
     end
 end)
 
-header.MouseButton1Up:Connect(function()
-    arrastandoMenu = false
-end)
-
--- ====== ARRASTAR BOTÃO ======
+-- ====== ARRASTAR COM TOQUE UNIVERSAL ======
 local arrastandoM = false
-local inicioMX, inicioMY
+local arrastoInicioX, arrastoInicioY = 0, 0
 local posMInicial
 
-toggleBtn.MouseButton1Down:Connect(function(x, y)
-    arrastandoM = true
-    inicioMX = x
-    inicioMY = y
-    posMInicial = toggleBtn.Position
+UserInputService.TouchStarted:Connect(function(input)
+    local btnPos = toggleBtn.AbsolutePosition
+    local btnSize = toggleBtn.AbsoluteSize
+    
+    if input.Position.X >= btnPos.X and input.Position.X <= btnPos.X + btnSize.X 
+       and input.Position.Y >= btnPos.Y and input.Position.Y <= btnPos.Y + btnSize.Y then
+        arrastandoM = true
+        arrastoInicioX = input.Position.X
+        arrastoInicioY = input.Position.Y
+        posMInicial = toggleBtn.Position
+    end
 end)
 
-toggleBtn.MouseMoved:Connect(function(x, y)
+UserInputService.TouchMoved:Connect(function(input)
     if arrastandoM then
-        local deltaX = x - inicioMX
-        local deltaY = y - inicioMY
+        local deltaX = input.Position.X - arrastoInicioX
+        local deltaY = input.Position.Y - arrastoInicioY
         toggleBtn.Position = UDim2.new(
             posMInicial.X.Scale, posMInicial.X.Offset + deltaX,
             posMInicial.Y.Scale, posMInicial.Y.Offset + deltaY
@@ -439,14 +470,53 @@ toggleBtn.MouseMoved:Connect(function(x, y)
     end
 end)
 
-toggleBtn.MouseButton1Up:Connect(function()
+UserInputService.TouchEnded:Connect(function(input)
     arrastandoM = false
 end)
 
--- ====== ABRIR/FECHAR MENU ======
+-- ====== ARRASTAR MENU (pelo cabeçalho) ======
+local arrastandoMenu = false
+local arrastoMenuX, arrastoMenuY = 0, 0
+local posMenuInicial
+
+UserInputService.TouchStarted:Connect(function(input)
+    local headerPos = header.AbsolutePosition
+    local headerSize = header.AbsoluteSize
+    
+    if menu.Visible 
+       and input.Position.X >= headerPos.X and input.Position.X <= headerPos.X + headerSize.X 
+       and input.Position.Y >= headerPos.Y and input.Position.Y <= headerPos.Y + headerSize.Y then
+        arrastandoMenu = true
+        arrastoMenuX = input.Position.X
+        arrastoMenuY = input.Position.Y
+        posMenuInicial = menu.Position
+    end
+end)
+
+UserInputService.TouchMoved:Connect(function(input)
+    if arrastandoMenu then
+        local deltaX = input.Position.X - arrastoMenuX
+        local deltaY = input.Position.Y - arrastoMenuY
+        menu.Position = UDim2.new(
+            posMenuInicial.X.Scale, posMenuInicial.X.Offset + deltaX,
+            posMenuInicial.Y.Scale, posMenuInicial.Y.Offset + deltaY
+        )
+    end
+end)
+
+UserInputService.TouchEnded:Connect(function(input)
+    arrastandoMenu = false
+end)
+
+-- ====== FALLBACK: Activate nos botões ======
 toggleBtn.Activated:Connect(function()
     menuAberto = not menuAberto
     menu.Visible = menuAberto
 end)
 
-print("Marin Hub v6 carregado!")
+toggleBtn.MouseButton1Click:Connect(function()
+    menuAberto = not menuAberto
+    menu.Visible = menuAberto
+end)
+
+print("Marin Hub v6.1 carregado!")
