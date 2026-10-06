@@ -288,7 +288,7 @@ local function fazerTeleporte()
     teleportando = false
 end
 
--- ====== AUTO-TWEEN (DETECÇÃO DE OVO) ======
+-- ====== AUTO-TWEEN ======
 local function monitorarOvo()
     local char = LocalPlayer.Character
     if not char then return end
@@ -332,10 +332,13 @@ criarBotao("⚡ Tween Ultra Rápido", COR_VERMELHO, function()
     fazerTeleporte()
 end)
 
--- ⚠️ btnAuto declarado ANTES pra funcionar no callback
+-- ⚠️ btnAuto com DEBUG
 local btnAuto
 btnAuto = criarBotao("🤖 Auto-Tween: OFF", COR_VERDE, function()
+    print(">>> CLIQUE NO AUTO-TWEEN DETECTADO!")
     autoTweenAtivo = not autoTweenAtivo
+    print(">>> autoTweenAtivo =", autoTweenAtivo)
+    
     if autoTweenAtivo then
         btnAuto.Text = "   🤖 Auto-Tween: ON"
         status.Text = "🤖 Auto-Tween ativado!"
