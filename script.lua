@@ -1,25 +1,24 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB v6.1 - Steal An Egg
-    Interface Simples + Touch Universal
+    MARIN HUB v7 - Steal An Egg
+    Design Moderno + Teleporte por Áreas
     ═══════════════════════════════════════════
 ]]
 
 -- ====== SERVIÇOS ======
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
--- ====== LIMPEZA AUTOMÁTICA ======
+-- ====== LIMPEZA ======
 for _, v in pairs(CoreGui:GetChildren()) do
     if v.Name == "MarinHub" then
         v:Destroy()
     end
 end
 
--- ====== COORDENADAS DAS ÁREAS ======
+-- ====== ÁREAS ======
 local areas = {
     {nome = "🌲 Forest",            pos = Vector3.new(596, 71, -375)},
     {nome = "🌊 Lake",              pos = Vector3.new(715, 71, -365)},
@@ -40,43 +39,45 @@ local areas = {
 local safePos = nil
 local teleportando = false
 local menuAberto = false
-local submenuAberto = false
-local submenuFrame = nil
 
 -- ====== CORES ======
-local COR_FUNDO = Color3.fromRGB(18, 18, 22)
-local COR_SECAO = Color3.fromRGB(28, 28, 34)
-local COR_BOTAO = Color3.fromRGB(45, 45, 55)
-local COR_BOTAO_HOVER = Color3.fromRGB(60, 60, 75)
+local COR_FUNDO = Color3.fromRGB(22, 22, 28)
+local COR_SECAO = Color3.fromRGB(32, 32, 40)
+local COR_BOTAO = Color3.fromRGB(48, 48, 60)
+local COR_HOVER = Color3.fromRGB(65, 65, 80)
 local COR_VERDE = Color3.fromRGB(0, 220, 130)
-local COR_VERMELHO = Color3.fromRGB(230, 70, 70)
-local COR_AZUL = Color3.fromRGB(70, 130, 230)
-local COR_LARANJA = Color3.fromRGB(240, 140, 60)
-local COR_TEXTO = Color3.fromRGB(240, 240, 240)
+local COR_VERMELHO = Color3.fromRGB(235, 80, 80)
+local COR_AZUL = Color3.fromRGB(75, 140, 240)
+local COR_ROXO = Color3.fromRGB(160, 100, 230)
+local COR_TEXTO = Color3.fromRGB(235, 235, 240)
+local COR_SUBTEXTO = Color3.fromRGB(140, 140, 155)
 
 -- ====== INTERFACE ======
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MarinHub"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
+screenGui.IgnoreGuiInset = false
+screenGui.DisplayOrder = 999999
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Botão "Marin Hub"
+-- ====== BOTÃO FLUTUANTE ======
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 110, 0, 55)
-toggleBtn.Position = UDim2.new(0, 20, 0.5, -27)
+toggleBtn.Size = UDim2.new(0, 60, 0, 60)
+toggleBtn.Position = UDim2.new(0, 20, 0.5, -30)
 toggleBtn.BackgroundColor3 = COR_FUNDO
 toggleBtn.TextColor3 = COR_VERDE
-toggleBtn.Text = "Marin\nHub"
-toggleBtn.TextSize = 16
+toggleBtn.Text = "M"
+toggleBtn.TextSize = 26
 toggleBtn.Font = Enum.Font.GothamBlack
 toggleBtn.BorderSizePixel = 0
 toggleBtn.AutoButtonColor = false
 toggleBtn.Active = true
+toggleBtn.ZIndex = 100
 toggleBtn.Parent = screenGui
 
 local tc = Instance.new("UICorner")
-tc.CornerRadius = UDim.new(0, 14)
+tc.CornerRadius = UDim.new(1, 0) -- círculo
 tc.Parent = toggleBtn
 
 local ts = Instance.new("UIStroke")
@@ -85,14 +86,14 @@ ts.Thickness = 2
 ts.Transparency = 0.3
 ts.Parent = toggleBtn
 
--- ====== MENU PRINCIPAL ======
+-- ====== MENU ======
 local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 280, 0, 400)
-menu.Position = UDim2.new(0, 140, 0.5, -200)
+menu.Size = UDim2.new(0, 300, 0, 420)
+menu.Position = UDim2.new(0.5, -150, 0.5, -210)
 menu.BackgroundColor3 = COR_FUNDO
 menu.BorderSizePixel = 0
 menu.Visible = false
-menu.ClipsDescendants = true
+menu.ZIndex = 200
 menu.Parent = screenGui
 
 local mc = Instance.new("UICorner")
@@ -102,15 +103,16 @@ mc.Parent = menu
 local ms = Instance.new("UIStroke")
 ms.Color = COR_VERDE
 ms.Thickness = 1.5
-ms.Transparency = 0.4
+ms.Transparency = 0.5
 ms.Parent = menu
 
 -- Cabeçalho
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 65)
+header.Size = UDim2.new(1, 0, 0, 70)
 header.BackgroundColor3 = COR_SECAO
 header.BorderSizePixel = 0
 header.Active = true
+header.ZIndex = 201
 header.Parent = menu
 
 local hc = Instance.new("UICorner")
@@ -122,39 +124,55 @@ hf.Size = UDim2.new(1, 0, 0, 20)
 hf.Position = UDim2.new(0, 0, 1, -20)
 hf.BackgroundColor3 = COR_SECAO
 hf.BorderSizePixel = 0
+hf.ZIndex = 201
 hf.Parent = header
 
+-- Título
 local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, -30, 0, 30)
-titulo.Position = UDim2.new(0, 15, 0, 10)
+titulo.Size = UDim2.new(1, -30, 0, 28)
+titulo.Position = UDim2.new(0, 20, 0, 12)
 titulo.BackgroundTransparency = 1
 titulo.Text = "MARIN HUB"
 titulo.TextColor3 = COR_VERDE
-titulo.TextSize = 22
+titulo.TextSize = 20
 titulo.Font = Enum.Font.GothamBlack
 titulo.TextXAlignment = Enum.TextXAlignment.Left
+titulo.ZIndex = 202
 titulo.Parent = header
 
+-- Subtítulo
 local subtitulo = Instance.new("TextLabel")
-subtitulo.Size = UDim2.new(1, -30, 0, 18)
-subtitulo.Position = UDim2.new(0, 15, 0, 38)
+subtitulo.Size = UDim2.new(1, -30, 0, 16)
+subtitulo.Position = UDim2.new(0, 20, 0, 40)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v6.1"
-subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
+subtitulo.Text = "Steal An Egg • v7.0"
+subtitulo.TextColor3 = COR_SUBTEXTO
 subtitulo.TextSize = 11
 subtitulo.Font = Enum.Font.Gotham
 subtitulo.TextXAlignment = Enum.TextXAlignment.Left
+subtitulo.ZIndex = 202
 subtitulo.Parent = header
 
--- Scroll principal
+-- Linha decorativa
+local linha = Instance.new("Frame")
+linha.Size = UDim2.new(1, -40, 0, 1)
+linha.Position = UDim2.new(0, 20, 0, 69)
+linha.BackgroundColor3 = COR_VERDE
+linha.BackgroundTransparency = 0.6
+linha.BorderSizePixel = 0
+linha.ZIndex = 202
+linha.Parent = header
+
+-- Scroll
 local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -20, 1, -80)
-scroll.Position = UDim2.new(0, 10, 0, 72)
+scroll.Size = UDim2.new(1, -20, 1, -85)
+scroll.Position = UDim2.new(0, 10, 0, 78)
 scroll.BackgroundTransparency = 1
 scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 6
+scroll.ScrollBarThickness = 5
 scroll.ScrollBarImageColor3 = COR_VERDE
 scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
+scroll.ZIndex = 201
 scroll.Parent = menu
 
 local layout = Instance.new("UIListLayout")
@@ -167,53 +185,54 @@ layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 -- Função criar botão
-local function criarBotao(texto, cor, callback, parent)
+local function criarBotao(texto, cor, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -5, 0, 45)
+    btn.Size = UDim2.new(1, -5, 0, 48)
     btn.BackgroundColor3 = COR_BOTAO
     btn.TextColor3 = COR_TEXTO
-    btn.Text = texto
+    btn.Text = "   " .. texto
     btn.TextSize = 14
     btn.Font = Enum.Font.GothamMedium
     btn.BorderSizePixel = 0
     btn.AutoButtonColor = false
     btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.Active = true
-    btn.Parent = parent or scroll
+    btn.ZIndex = 202
+    btn.Parent = scroll
     
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 10)
     c.Parent = btn
     
-    local st = Instance.new("UIStroke")
-    st.Color = cor
-    st.Thickness = 1
-    st.Transparency = 0.6
-    st.Parent = btn
+    -- Barra lateral colorida
+    local barra = Instance.new("Frame")
+    barra.Size = UDim2.new(0, 4, 0, 26)
+    barra.Position = UDim2.new(0, 10, 0.5, -13)
+    barra.BackgroundColor3 = cor
+    barra.BorderSizePixel = 0
+    barra.ZIndex = 203
+    barra.Parent = btn
     
-    local p = Instance.new("UIPadding")
-    p.PaddingLeft = UDim.new(0, 16)
-    p.Parent = btn
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 4)
+    bc.Parent = barra
     
-    local ind = Instance.new("Frame")
-    ind.Size = UDim2.new(0, 4, 0, 22)
-    ind.Position = UDim2.new(0, 8, 0.5, -11)
-    ind.BackgroundColor3 = cor
-    ind.BorderSizePixel = 0
-    ind.Parent = btn
+    -- Hover
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COR_HOVER}):Play()
+    end)
     
-    local ic = Instance.new("UICorner")
-    ic.CornerRadius = UDim.new(0, 4)
-    ic.Parent = ind
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COR_BOTAO}):Play()
+    end)
     
-    -- Usa Activated E MouseButton1Click (redundância)
     btn.Activated:Connect(callback)
     btn.MouseButton1Click:Connect(callback)
     
     return btn
 end
 
--- ====== FUNÇÃO TELEPORTE (INTACTA) ======
+-- ====== TELEPORTE (INTACTO) ======
 local function fazerTeleporte(destino)
     if teleportando then return end
     teleportando = true
@@ -254,6 +273,9 @@ local function fazerTeleporte(destino)
 end
 
 -- ====== SUBMENU DE ÁREAS ======
+local submenuAberto = false
+local submenuFrame = nil
+
 local function fecharSubmenu()
     if submenuFrame then
         submenuFrame:Destroy()
@@ -270,7 +292,7 @@ local function abrirSubmenu()
     submenuFrame.Position = UDim2.new(0.5, -140, 0.5, -210)
     submenuFrame.BackgroundColor3 = COR_FUNDO
     submenuFrame.BorderSizePixel = 0
-    submenuFrame.ZIndex = 30
+    submenuFrame.ZIndex = 300
     submenuFrame.Parent = screenGui
     
     local sc = Instance.new("UICorner")
@@ -278,26 +300,47 @@ local function abrirSubmenu()
     sc.Parent = submenuFrame
     
     local ss = Instance.new("UIStroke")
-    ss.Color = COR_LARANJA
+    ss.Color = COR_ROXO
     ss.Thickness = 1.5
-    ss.Transparency = 0.4
+    ss.Transparency = 0.5
     ss.Parent = submenuFrame
     
+    -- Cabeçalho do submenu
+    local subHeader = Instance.new("Frame")
+    subHeader.Size = UDim2.new(1, 0, 0, 50)
+    subHeader.BackgroundColor3 = COR_SECAO
+    subHeader.BorderSizePixel = 0
+    subHeader.ZIndex = 301
+    subHeader.Parent = submenuFrame
+    
+    local shc = Instance.new("UICorner")
+    shc.CornerRadius = UDim.new(0, 16)
+    shc.Parent = subHeader
+    
+    local shf = Instance.new("Frame")
+    shf.Size = UDim2.new(1, 0, 0, 15)
+    shf.Position = UDim2.new(0, 0, 1, -15)
+    shf.BackgroundColor3 = COR_SECAO
+    shf.BorderSizePixel = 0
+    shf.ZIndex = 301
+    shf.Parent = subHeader
+    
     local tit = Instance.new("TextLabel")
-    tit.Size = UDim2.new(1, -80, 0, 35)
-    tit.Position = UDim2.new(0, 15, 0, 5)
+    tit.Size = UDim2.new(1, -100, 0, 30)
+    tit.Position = UDim2.new(0, 15, 0, 10)
     tit.BackgroundTransparency = 1
     tit.Text = "🗺️ ESCOLHER ÁREA"
-    tit.TextColor3 = COR_LARANJA
+    tit.TextColor3 = COR_ROXO
     tit.TextSize = 14
     tit.Font = Enum.Font.GothamBold
     tit.TextXAlignment = Enum.TextXAlignment.Left
-    tit.ZIndex = 31
-    tit.Parent = submenuFrame
+    tit.ZIndex = 302
+    tit.Parent = subHeader
     
+    -- Botão Voltar
     local voltar = Instance.new("TextButton")
-    voltar.Size = UDim2.new(0, 70, 0, 28)
-    voltar.Position = UDim2.new(1, -80, 0, 6)
+    voltar.Size = UDim2.new(0, 75, 0, 30)
+    voltar.Position = UDim2.new(1, -85, 0, 10)
     voltar.BackgroundColor3 = COR_AZUL
     voltar.Text = "← Voltar"
     voltar.TextColor3 = COR_TEXTO
@@ -305,8 +348,8 @@ local function abrirSubmenu()
     voltar.Font = Enum.Font.GothamBold
     voltar.BorderSizePixel = 0
     voltar.Active = true
-    voltar.ZIndex = 31
-    voltar.Parent = submenuFrame
+    voltar.ZIndex = 302
+    voltar.Parent = subHeader
     
     local vc = Instance.new("UICorner")
     vc.CornerRadius = UDim.new(0, 8)
@@ -315,15 +358,16 @@ local function abrirSubmenu()
     voltar.Activated:Connect(fecharSubmenu)
     voltar.MouseButton1Click:Connect(fecharSubmenu)
     
+    -- Scroll do submenu
     local subScroll = Instance.new("ScrollingFrame")
-    subScroll.Size = UDim2.new(1, -20, 1, -50)
-    subScroll.Position = UDim2.new(0, 10, 0, 40)
+    subScroll.Size = UDim2.new(1, -20, 1, -65)
+    subScroll.Position = UDim2.new(0, 10, 0, 55)
     subScroll.BackgroundTransparency = 1
     subScroll.BorderSizePixel = 0
-    subScroll.ScrollBarThickness = 6
-    subScroll.ScrollBarImageColor3 = COR_LARANJA
+    subScroll.ScrollBarThickness = 5
+    subScroll.ScrollBarImageColor3 = COR_ROXO
     subScroll.CanvasSize = UDim2.new(0, 0, 0, 700)
-    subScroll.ZIndex = 31
+    subScroll.ZIndex = 301
     subScroll.Parent = submenuFrame
     
     local sl = Instance.new("UIListLayout")
@@ -337,32 +381,42 @@ local function abrirSubmenu()
     
     for _, area in ipairs(areas) do
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -5, 0, 40)
+        btn.Size = UDim2.new(1, -5, 0, 42)
         btn.BackgroundColor3 = COR_BOTAO
         btn.TextColor3 = COR_TEXTO
-        btn.Text = area.nome
+        btn.Text = "   " .. area.nome
         btn.TextSize = 13
         btn.Font = Enum.Font.GothamMedium
         btn.BorderSizePixel = 0
         btn.AutoButtonColor = false
         btn.TextXAlignment = Enum.TextXAlignment.Left
         btn.Active = true
-        btn.ZIndex = 32
+        btn.ZIndex = 302
         btn.Parent = subScroll
         
         local bc = Instance.new("UICorner")
         bc.CornerRadius = UDim.new(0, 8)
         bc.Parent = btn
         
-        local bs = Instance.new("UIStroke")
-        bs.Color = COR_LARANJA
-        bs.Thickness = 1
-        bs.Transparency = 0.5
-        bs.Parent = btn
+        local barra = Instance.new("Frame")
+        barra.Size = UDim2.new(0, 3, 0, 22)
+        barra.Position = UDim2.new(0, 10, 0.5, -11)
+        barra.BackgroundColor3 = COR_ROXO
+        barra.BorderSizePixel = 0
+        barra.ZIndex = 303
+        barra.Parent = btn
         
-        local bp = Instance.new("UIPadding")
-        bp.PaddingLeft = UDim.new(0, 12)
-        bp.Parent = btn
+        local barc = Instance.new("UICorner")
+        barc.CornerRadius = UDim.new(0, 3)
+        barc.Parent = barra
+        
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = COR_HOVER}):Play()
+        end)
+        
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = COR_BOTAO}):Play()
+        end)
         
         btn.Activated:Connect(function()
             fazerTeleporte(area.pos)
@@ -375,21 +429,21 @@ local function abrirSubmenu()
     end
 end
 
--- ====== BOTÕES PRINCIPAIS ======
-criarBotao("📍  Salvar Safe Zone", COR_AZUL, function()
+-- ====== BOTÕES DO MENU ======
+criarBotao("Salvar Safe Zone", COR_AZUL, function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
         safePos = char.HumanoidRootPart.CFrame
     end
 end)
 
-criarBotao("⚡  TWEEN ULTRA RÁPIDO", COR_VERMELHO, function()
+criarBotao("Tween Ultra Rápido", COR_VERMELHO, function()
     if safePos then
         fazerTeleporte(safePos)
     end
 end)
 
-criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
+criarBotao("Escolher Área", COR_ROXO, function()
     if submenuAberto then
         fecharSubmenu()
     else
@@ -397,72 +451,49 @@ criarBotao("🗺️  Escolher Área", COR_LARANJA, function()
     end
 end)
 
--- ====== SISTEMA DE TOQUE UNIVERSAL ======
--- Captura QUALQUER toque na tela e verifica se foi no botão
+-- ====== ARRASTAR MENU ======
+local arrastandoMenu = false
+local inicioX, inicioY
+local posInicial
 
-local toqueIniciado = false
-local toqueX, toqueY = 0, 0
-local ultimoToque = 0
-
-UserInputService.InputBegan:Connect(function(input, processado)
-    if processado then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    local agora = tick()
-    if agora - ultimoToque < 0.3 then return end -- evita duplo toque
-    
-    toqueX = input.Position.X
-    toqueY = input.Position.Y
-    toqueIniciado = true
+header.MouseButton1Down:Connect(function(x, y)
+    arrastandoMenu = true
+    inicioX = x
+    inicioY = y
+    posInicial = menu.Position
 end)
 
-UserInputService.InputEnded:Connect(function(input, processado)
-    if not toqueIniciado then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    toqueIniciado = false
-    
-    local fimX = input.Position.X
-    local fimY = input.Position.Y
-    
-    -- Verifica se foi um TAP (não foi arrastar)
-    local dist = math.sqrt((fimX - toqueX)^2 + (fimY - toqueY)^2)
-    if dist > 15 then return end -- foi arrastar, ignora
-    
-    -- Verifica se tocou no botão "Marin Hub"
-    local btnPos = toggleBtn.AbsolutePosition
-    local btnSize = toggleBtn.AbsoluteSize
-    
-    if toqueX >= btnPos.X and toqueX <= btnPos.X + btnSize.X 
-       and toqueY >= btnPos.Y and toqueY <= btnPos.Y + btnSize.Y then
-        -- Tocou no botão!
-        menuAberto = not menuAberto
-        menu.Visible = menuAberto
+header.MouseMoved:Connect(function(x, y)
+    if arrastandoMenu then
+        local deltaX = x - inicioX
+        local deltaY = y - inicioY
+        menu.Position = UDim2.new(
+            posInicial.X.Scale, posInicial.X.Offset + deltaX,
+            posInicial.Y.Scale, posInicial.Y.Offset + deltaY
+        )
     end
 end)
 
--- ====== ARRASTAR COM TOQUE UNIVERSAL ======
+header.MouseButton1Up:Connect(function()
+    arrastandoMenu = false
+end)
+
+-- ====== ARRASTAR BOTÃO M ======
 local arrastandoM = false
-local arrastoInicioX, arrastoInicioY = 0, 0
+local inicioMX, inicioMY
 local posMInicial
 
-UserInputService.TouchStarted:Connect(function(input)
-    local btnPos = toggleBtn.AbsolutePosition
-    local btnSize = toggleBtn.AbsoluteSize
-    
-    if input.Position.X >= btnPos.X and input.Position.X <= btnPos.X + btnSize.X 
-       and input.Position.Y >= btnPos.Y and input.Position.Y <= btnPos.Y + btnSize.Y then
-        arrastandoM = true
-        arrastoInicioX = input.Position.X
-        arrastoInicioY = input.Position.Y
-        posMInicial = toggleBtn.Position
-    end
+toggleBtn.MouseButton1Down:Connect(function(x, y)
+    arrastandoM = true
+    inicioMX = x
+    inicioMY = y
+    posMInicial = toggleBtn.Position
 end)
 
-UserInputService.TouchMoved:Connect(function(input)
+toggleBtn.MouseMoved:Connect(function(x, y)
     if arrastandoM then
-        local deltaX = input.Position.X - arrastoInicioX
-        local deltaY = input.Position.Y - arrastoInicioY
+        local deltaX = x - inicioMX
+        local deltaY = y - inicioMY
         toggleBtn.Position = UDim2.new(
             posMInicial.X.Scale, posMInicial.X.Offset + deltaX,
             posMInicial.Y.Scale, posMInicial.Y.Offset + deltaY
@@ -470,45 +501,11 @@ UserInputService.TouchMoved:Connect(function(input)
     end
 end)
 
-UserInputService.TouchEnded:Connect(function(input)
+toggleBtn.MouseButton1Up:Connect(function()
     arrastandoM = false
 end)
 
--- ====== ARRASTAR MENU (pelo cabeçalho) ======
-local arrastandoMenu = false
-local arrastoMenuX, arrastoMenuY = 0, 0
-local posMenuInicial
-
-UserInputService.TouchStarted:Connect(function(input)
-    local headerPos = header.AbsolutePosition
-    local headerSize = header.AbsoluteSize
-    
-    if menu.Visible 
-       and input.Position.X >= headerPos.X and input.Position.X <= headerPos.X + headerSize.X 
-       and input.Position.Y >= headerPos.Y and input.Position.Y <= headerPos.Y + headerSize.Y then
-        arrastandoMenu = true
-        arrastoMenuX = input.Position.X
-        arrastoMenuY = input.Position.Y
-        posMenuInicial = menu.Position
-    end
-end)
-
-UserInputService.TouchMoved:Connect(function(input)
-    if arrastandoMenu then
-        local deltaX = input.Position.X - arrastoMenuX
-        local deltaY = input.Position.Y - arrastoMenuY
-        menu.Position = UDim2.new(
-            posMenuInicial.X.Scale, posMenuInicial.X.Offset + deltaX,
-            posMenuInicial.Y.Scale, posMenuInicial.Y.Offset + deltaY
-        )
-    end
-end)
-
-UserInputService.TouchEnded:Connect(function(input)
-    arrastandoMenu = false
-end)
-
--- ====== FALLBACK: Activate nos botões ======
+-- ====== ABRIR/FECHAR ======
 toggleBtn.Activated:Connect(function()
     menuAberto = not menuAberto
     menu.Visible = menuAberto
@@ -519,4 +516,4 @@ toggleBtn.MouseButton1Click:Connect(function()
     menu.Visible = menuAberto
 end)
 
-print("Marin Hub v6.1 carregado!")
+print("Marin Hub v7 carregado!")
