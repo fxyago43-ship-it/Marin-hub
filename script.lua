@@ -1,7 +1,7 @@
 --[[
     ═══════════════════════════════════════════
     MH HUB - Tween Ultra Rápido + Auto
-    Tap pra abrir, arrasto pra mover
+    Segurar pra abrir, arrastar pra mover
     ═══════════════════════════════════════════
 ]]
 
@@ -352,21 +352,30 @@ btnMin.MouseButton1Click:Connect(function() janela.Visible = false end)
 btnFechar.Activated:Connect(function() screenGui:Destroy() end)
 btnFechar.MouseButton1Click:Connect(function() screenGui:Destroy() end)
 
--- ====== ARRASTAR BOTÃO + TAP (SISTEMA CORRIGIDO) ======
+-- ====== ARRASTAR BOTÃO + SEGURAR PRA ABRIR ======
 local arrastandoBtn = false
 local btnInicioX, btnInicioY
 local btnPosInicial
-local toqueInicio = 0
 local moveuMuito = false
+local segurando = false
 
 btnFlutuante.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
         arrastandoBtn = true
         moveuMuito = false
+        segurando = true
         btnInicioX = input.Position.X
         btnInicioY = input.Position.Y
         btnPosInicial = btnFlutuante.Position
-        toqueInicio = tick()
+        
+        -- Timer pra detectar segurar por 0.5s
+        task.spawn(function()
+            task.wait(0.5)
+            if segurando and not moveuMuito then
+                janela.Visible = not janela.Visible
+                segurando = false
+            end
+        end)
     end
 end)
 
@@ -375,9 +384,9 @@ btnFlutuante.InputChanged:Connect(function(input)
         local deltaX = input.Position.X - btnInicioX
         local deltaY = input.Position.Y - btnInicioY
         
-        -- Se moveu mais de 10 pixels, é arrasto
         if math.abs(deltaX) > 10 or math.abs(deltaY) > 10 then
             moveuMuito = true
+            segurando = false
         end
         
         btnFlutuante.Position = UDim2.new(
@@ -390,11 +399,7 @@ end)
 btnFlutuante.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
         arrastandoBtn = false
-        
-        -- Se NÃO moveu muito e o tempo foi curto = TAP → abre menu
-        if not moveuMuito and (tick() - toqueInicio) < 0.5 then
-            janela.Visible = not janela.Visible
-        end
+        segurando = false
     end
 end)
 
