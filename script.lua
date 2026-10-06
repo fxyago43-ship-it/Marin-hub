@@ -1,19 +1,12 @@
 --[[
     ============================================================
     SISTEMA DE TELEPORTE COM TWEEN + GUI MOBILE ARRASTÁVEL
-    - Botão flutuante "MH" arrastável (canto da tela)
-    - Painel principal arrastável pela barra superior
-    - Sem backdrop: a GUI NÃO fecha ao tocar fora
-    - Fecha SOMENTE pelo botão ✕ ou pelo ícone MH
+    v3 - Adiciona menu "Teleportar para Área Desejada"
     ============================================================
-    Estrutura:
-      1. CONFIG          -> Constantes ajustáveis
-      2. UTILS           -> Funções auxiliares
-      3. STORAGE         -> Salvar/limpar posição
-      4. TWEEN SYSTEM    -> Movimento suave do personagem
-      5. DRAG            -> Sistema de arrastar (touch-first)
-      6. GUI             -> Ícone "MH" + Painel principal
-      7. CONTROLLER      -> Liga GUI aos sistemas
+    - Botão flutuante "MH" arrastável
+    - Painel principal arrastável pela barra superior
+    - Fecha SOMENTE pelo botão ✕ ou pelo ícone MH
+    - NOVO: Submenu com lista de áreas do mapa
     ============================================================
 --]]
 
@@ -46,21 +39,42 @@ local CONFIG = {
         TextDim    = Color3.fromRGB(180, 160, 175),
         Success    = Color3.fromRGB(120, 230, 150),
         Danger     = Color3.fromRGB(255, 90, 120),
+        -- NOVO: cor do menu de áreas
+        Areas      = Color3.fromRGB(255, 160, 60),
+        AreasDark  = Color3.fromRGB(190, 100, 30),
     },
     Font            = Enum.Font.GothamBold,
     FontRegular     = Enum.Font.Gotham,
-    BackgroundImage = "rbxassetid://13164337291", -- troque pelo seu
+    BackgroundImage = "rbxassetid://13164337291",
 
     -- Mobile sizing
     FloatingBtnSize = 56,
     PanelWidth      = 320,
     PanelHeight     = 450,
-    HeaderHeight    = 130,   -- área arrastável no topo do painel
+    HeaderHeight    = 130,
     ButtonHeight    = 50,
     ButtonGap       = 12,
-
-    -- Margem mínima entre o painel e as bordas da tela
     ScreenMargin    = 8,
+}
+
+--=============================================================
+-- 1b. NOVO - LISTA DE ÁREAS (edite aqui para adicionar/remover)
+--=============================================================
+-- Y fixo em 71 conforme suas prints (todas as áreas usam o mesmo Y)
+local AREAS = {
+    { nome = "Forest",              x = 596,  y = 71, z = -375 },
+    { nome = "Lake",                x = 715,  y = 71, z = -365 },
+    { nome = "Desert",              x = 942,  y = 71, z = -336 },
+    { nome = "Jungle",              x = 1192, y = 71, z = -395 },
+    { nome = "Snow",                x = 1492, y = 71, z = -329 },
+    { nome = "Volcano",             x = 1878, y = 71, z = -383 },
+    { nome = "Abyss Ocean",         x = 2279, y = 71, z = -344 },
+    { nome = "Prehistoric",         x = 2814, y = 71, z = -385 },
+    { nome = "Prehistoric (alt)",   x = 3394, y = 71, z = -341 },
+    { nome = "Cherry Blossom",      x = 4028, y = 71, z = -382 },
+    { nome = "Cherry Blossom (alt)",x = 4796, y = 71, z = -344 },
+    { nome = "Titan Temple",        x = 5667, y = 71, z = -355 },
+    { nome = "Angels",              x = 6695, y = 71, z = -368 },
 }
 
 --=============================================================
@@ -192,31 +206,34 @@ function TweenSystem.moveToSaved(useMoveTo)
     return true
 end
 
---=============================================================
--- 5. DRAG SYSTEM (touch-first, genérico)
---=============================================================
---[[
-    Torna um GuiObject arrastável.
+-- NOVO: teleporta para uma área da lista
+function TweenSystem.moveToArea(area, useMoveTo)
+    if not area then
+        return false, "Área inválida"
+    end
+    -- Mantém a rotação atual do personagem (só muda posição)
+    local char = LocalPlayer.Character
+    if not char then return false, "Sem personagem" end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false, "HRP ausente" end
 
-    - Arrasta APENAS quando o toque começa no objeto "handle" (ex.: header).
-    - Usa limiar de pixels para diferenciar tap de drag.
-    - Se o toque sair do objeto durante o arrasto, o movimento continua até soltar.
-    - Clampa a posição dentro dos limites do ScreenGui.
+    local currentCF = hrp.CFrame
+    local newCF = CFrame.new(Vector3.new(area.x, area.y, area.z)) * (currentCF - currentCF.Position)
+    TweenSystem.moveTo(newCF, useMoveTo)
+    return true
+end
 
-    handle   : GuiObject que captura o toque (ex.: barra superior)
-    target   : GuiObject que será movido (ex.: painel inteiro)
-    onTap    : (opcional) callback disparado quando foi apenas um toque
-    bounds   : (opcional) GuiObject de referência (default: ScreenGui do target)
---]]
+--=============================================================
+-- 5. DRAG SYSTEM
+--=============================================================
 local Drag = {}
 
 function Drag.makeDraggable(handle, target, onTap, bounds)
-    local TAP_THRESHOLD = 6  -- pixels
+    local TAP_THRESHOLD = 6
     local dragging = false
     local moved = false
-    local dragStart, startPos, startTargetPos
+    local dragStart, startTargetPos
 
-    -- Usa AbsolutePosition/AbsoluteSize para clamping preciso
     local function clampPosition(newPos)
         local screen = bounds or target.Parent
         local screenSize = screen.AbsoluteSize
@@ -237,8 +254,6 @@ function Drag.makeDraggable(handle, target, onTap, bounds)
         moved = false
         dragStart = input.Position
         startTargetPos = target.Position
-
-        -- Efeito visual suave ao pegar
         Utils.tween(target, 0.1, { BackgroundTransparency = 0.06 })
     end
 
@@ -262,13 +277,11 @@ function Drag.makeDraggable(handle, target, onTap, bounds)
         if not dragging then return end
         dragging = false
         Utils.tween(target, 0.15, { BackgroundTransparency = 0.12 })
-
         if not moved and onTap then
             onTap(input)
         end
     end
 
-    -- InputBegan: inicia o arrasto se o toque começou no handle
     handle.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.Touch
         and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
@@ -277,7 +290,6 @@ function Drag.makeDraggable(handle, target, onTap, bounds)
         beginDrag(input)
     end)
 
-    -- InputChanged: continua o arrasto mesmo se o toque sair do handle
     handle.InputChanged:Connect(function(input)
         if not dragging then return end
         if input.UserInputType == Enum.UserInputType.Touch
@@ -286,7 +298,6 @@ function Drag.makeDraggable(handle, target, onTap, bounds)
         end
     end)
 
-    -- InputEnded: finaliza ao soltar
     handle.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch
         or input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -294,8 +305,6 @@ function Drag.makeDraggable(handle, target, onTap, bounds)
         end
     end)
 
-    -- Segurança: se por algum motivo o input se perder, usamos
-    -- UserInputService como fallback global para encerrar o arrasto.
     UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if dragging and (input.UserInputType == Enum.UserInputType.Touch
         or input.UserInputType == Enum.UserInputType.MouseButton1) then
@@ -303,10 +312,6 @@ function Drag.makeDraggable(handle, target, onTap, bounds)
             Utils.tween(target, 0.15, { BackgroundTransparency = 0.12 })
         end
     end)
-
-    return {
-        isDragging = function() return dragging end,
-    }
 end
 
 --=============================================================
@@ -314,9 +319,6 @@ end
 --=============================================================
 local GUI = {}
 
--------------------------------------------------------------
--- 6a. Botão flutuante "MH"
--------------------------------------------------------------
 local function makeFloatingButton(parent)
     local btn = Instance.new("TextButton")
     btn.Name = "MH_FloatingButton"
@@ -352,9 +354,6 @@ local function makeFloatingButton(parent)
     return btn
 end
 
--------------------------------------------------------------
--- 6b. Botão do painel
--------------------------------------------------------------
 local function makeButton(parent, text, order, color)
     local btn = Instance.new("TextButton")
     btn.Name = "Btn_" .. text:gsub("%s+", "")
@@ -395,9 +394,65 @@ local function makeButton(parent, text, order, color)
     return btn
 end
 
--------------------------------------------------------------
--- 6c. Construtor principal
--------------------------------------------------------------
+-- NOVO: cria um botão de área para o submenu
+local function makeAreaButton(parent, area, order)
+    local btn = Instance.new("TextButton")
+    btn.Name = "Area_" .. area.nome:gsub("%s+", "")
+    btn.Size = UDim2.new(1, 0, 0, 46)
+    btn.BackgroundColor3 = CONFIG.Theme.PanelBg
+    btn.BackgroundTransparency = 0.15
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = order
+    btn.Parent = parent
+
+    Utils.corner(btn, 10)
+    Utils.stroke(btn, CONFIG.Theme.Areas, 1, 0.5)
+
+    local nome = Instance.new("TextLabel")
+    nome.Size = UDim2.new(1, -20, 0, 20)
+    nome.Position = UDim2.new(0, 12, 0, 6)
+    nome.BackgroundTransparency = 1
+    nome.Text = area.nome
+    nome.TextColor3 = CONFIG.Theme.Text
+    nome.TextSize = 15
+    nome.Font = CONFIG.Font
+    nome.TextXAlignment = Enum.TextXAlignment.Left
+    nome.Parent = btn
+
+    local coord = Instance.new("TextLabel")
+    coord.Size = UDim2.new(1, -20, 0, 14)
+    coord.Position = UDim2.new(0, 12, 0, 26)
+    coord.BackgroundTransparency = 1
+    coord.Text = string.format("X: %d  Y: %d  Z: %d", area.x, area.y, area.z)
+    coord.TextColor3 = CONFIG.Theme.TextDim
+    coord.TextSize = 11
+    coord.Font = CONFIG.FontRegular
+    coord.TextXAlignment = Enum.TextXAlignment.Left
+    coord.Parent = btn
+
+    btn.MouseEnter:Connect(function()
+        Utils.tween(btn, 0.15, {
+            BackgroundTransparency = 0,
+            BackgroundColor3 = CONFIG.Theme.AreasDark,
+        })
+    end)
+    btn.MouseLeave:Connect(function()
+        Utils.tween(btn, 0.15, {
+            BackgroundTransparency = 0.15,
+            BackgroundColor3 = CONFIG.Theme.PanelBg,
+        })
+    end)
+    btn.MouseButton1Down:Connect(function()
+        Utils.tween(btn, 0.07, { BackgroundColor3 = CONFIG.Theme.Areas })
+    end)
+    btn.MouseButton1Up:Connect(function()
+        Utils.tween(btn, 0.15, { BackgroundColor3 = CONFIG.Theme.AreasDark })
+    end)
+
+    return btn
+end
+
 function GUI.build()
     local old = PlayerGui:FindFirstChild(CONFIG.ScreenGuiName)
     if old then old:Destroy() end
@@ -409,9 +464,6 @@ function GUI.build()
     gui.IgnoreGuiInset = true
     gui.Parent = PlayerGui
 
-    -----------------------------------------------------------
-    -- Painel principal (posição inicial central)
-    -----------------------------------------------------------
     local panel = Instance.new("Frame")
     panel.Name = "MainPanel"
     panel.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -426,9 +478,6 @@ function GUI.build()
     Utils.corner(panel, 18)
     Utils.stroke(panel, CONFIG.Theme.Primary, 2, 0.3)
 
-    -----------------------------------------------------------
-    -- HEADER (barra superior = área arrastável)
-    -----------------------------------------------------------
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, CONFIG.HeaderHeight)
@@ -438,7 +487,6 @@ function GUI.build()
     header.Parent = panel
     Utils.corner(header, 18)
 
-    -- tapa o canto inferior do header (para não arredondar embaixo)
     local headerFix = Instance.new("Frame")
     headerFix.Size = UDim2.new(1, 0, 0, 20)
     headerFix.Position = UDim2.new(0, 0, 1, -20)
@@ -491,7 +539,6 @@ function GUI.build()
     subtitle.ZIndex = 65
     subtitle.Parent = header
 
-    -- Indicador visual de "segure para arrastar"
     local dragHint = Instance.new("TextLabel")
     dragHint.Name = "DragHint"
     dragHint.AnchorPoint = Vector2.new(1, 0)
@@ -506,7 +553,6 @@ function GUI.build()
     dragHint.ZIndex = 66
     dragHint.Parent = header
 
-    -- Botão fechar (fica no header, na frente do drag)
     local closeBtn = Instance.new("TextButton")
     closeBtn.Name = "Close"
     closeBtn.AnchorPoint = Vector2.new(1, 0)
@@ -525,7 +571,7 @@ function GUI.build()
     Utils.stroke(closeBtn, CONFIG.Theme.Accent, 1, 0.4)
 
     -----------------------------------------------------------
-    -- Corpo (abaixo do header)
+    -- Corpo principal
     -----------------------------------------------------------
     local body = Instance.new("Frame")
     body.Name = "Body"
@@ -541,7 +587,6 @@ function GUI.build()
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = body
 
-    -- Status
     local status = Instance.new("Frame")
     status.Name = "Status"
     status.Size = UDim2.new(1, 0, 0, 44)
@@ -576,14 +621,16 @@ function GUI.build()
 
     local btnSave  = makeButton(body, "💾  Salvar Local", 2, CONFIG.Theme.Primary)
     local btnTween = makeButton(body, "✨  Tween para Local", 3, CONFIG.Theme.Secondary)
-    local btnClear = makeButton(body, "🗑  Limpar Local", 4, Color3.fromRGB(120, 40, 70))
+    -- NOVO BOTÃO: Teleportar para Área
+    local btnArea  = makeButton(body, "🌍  Teleportar para Área", 4, CONFIG.Theme.Areas)
+    local btnClear = makeButton(body, "🗑  Limpar Local", 5, Color3.fromRGB(120, 40, 70))
 
     local sep = Instance.new("Frame")
     sep.Size = UDim2.new(1, 0, 0, 1)
     sep.BackgroundColor3 = CONFIG.Theme.Primary
     sep.BackgroundTransparency = 0.7
     sep.BorderSizePixel = 0
-    sep.LayoutOrder = 5
+    sep.LayoutOrder = 6
     sep.Parent = body
 
     local info = Instance.new("TextLabel")
@@ -594,26 +641,105 @@ function GUI.build()
     info.TextSize = 12
     info.Font = CONFIG.FontRegular
     info.TextWrapped = true
-    info.LayoutOrder = 6
+    info.LayoutOrder = 7
     info.Parent = body
 
     -----------------------------------------------------------
-    -- Botão flutuante "MH"
+    -- NOVO: Submenu de Áreas (cobre o corpo quando ativado)
     -----------------------------------------------------------
+    local areasMenu = Instance.new("Frame")
+    areasMenu.Name = "AreasMenu"
+    areasMenu.Position = UDim2.new(0, 0, 0, CONFIG.HeaderHeight)
+    areasMenu.Size = UDim2.new(1, 0, 1, -CONFIG.HeaderHeight)
+    areasMenu.BackgroundTransparency = 1
+    areasMenu.ZIndex = 75
+    areasMenu.Visible = false
+    areasMenu.Parent = panel
+    Utils.padding(areasMenu, 14)
+
+    -- Título do submenu
+    local areasTitle = Instance.new("TextLabel")
+    areasTitle.Size = UDim2.new(1, 0, 0, 26)
+    areasTitle.BackgroundTransparency = 1
+    areasTitle.Text = "🌍  Selecione uma área"
+    areasTitle.TextColor3 = CONFIG.Theme.Areas
+    areasTitle.TextSize = 16
+    areasTitle.Font = CONFIG.Font
+    areasTitle.TextXAlignment = Enum.TextXAlignment.Left
+    areasTitle.ZIndex = 76
+    areasTitle.Parent = areasMenu
+
+    -- ScrollingFrame com a lista
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Name = "AreasScroll"
+    scroll.Position = UDim2.new(0, 0, 0, 32)
+    scroll.Size = UDim2.new(1, 0, 1, -80)
+    scroll.BackgroundTransparency = 1
+    scroll.BorderSizePixel = 0
+    scroll.ScrollBarThickness = 6
+    scroll.ScrollBarImageColor3 = CONFIG.Theme.Areas
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.ZIndex = 76
+    scroll.Parent = areasMenu
+
+    local scrollLayout = Instance.new("UIListLayout")
+    scrollLayout.Padding = UDim.new(0, 8)
+    scrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    scrollLayout.Parent = scroll
+
+    -- Botão voltar
+    local backBtn = Instance.new("TextButton")
+    backBtn.Name = "BackBtn"
+    backBtn.AnchorPoint = Vector2.new(0.5, 1)
+    backBtn.Position = UDim2.new(0.5, 0, 1, 0)
+    backBtn.Size = UDim2.new(1, 0, 0, 44)
+    backBtn.BackgroundColor3 = CONFIG.Theme.PanelBg
+    backBtn.BackgroundTransparency = 0.1
+    backBtn.Text = "↩  Voltar"
+    backBtn.TextColor3 = CONFIG.Theme.Text
+    backBtn.TextSize = 15
+    backBtn.Font = CONFIG.Font
+    backBtn.AutoButtonColor = false
+    backBtn.ZIndex = 76
+    backBtn.Parent = areasMenu
+    Utils.corner(backBtn, 12)
+    Utils.stroke(backBtn, CONFIG.Theme.Accent, 1, 0.4)
+
+    -- Container de botões de área (para guardar referência)
+    local areaButtons = {}
+    for i, area in ipairs(AREAS) do
+        local b = makeAreaButton(scroll, area, i)
+        b.Name = "AreaBtn_" .. i
+        table.insert(areaButtons, { button = b, area = area })
+    end
+
+    -- Ajusta o canvas do scroll
+    task.defer(function()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, scrollLayout.AbsoluteContentSize.Y + 8)
+        scrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            scroll.CanvasSize = UDim2.new(0, 0, 0, scrollLayout.AbsoluteContentSize.Y + 8)
+        end)
+    end)
+
     local floatingBtn = makeFloatingButton(gui)
 
     return {
-        gui         = gui,
-        panel       = panel,
-        header      = header,
-        body        = body,
-        floatingBtn = floatingBtn,
-        closeBtn    = closeBtn,
-        statusDot   = statusDot,
-        statusText  = statusText,
-        btnSave     = btnSave,
-        btnTween    = btnTween,
-        btnClear    = btnClear,
+        gui          = gui,
+        panel        = panel,
+        header       = header,
+        body         = body,
+        areasMenu    = areasMenu,
+        scroll       = scroll,
+        areaButtons  = areaButtons,
+        backBtn      = backBtn,
+        floatingBtn  = floatingBtn,
+        closeBtn     = closeBtn,
+        statusDot    = statusDot,
+        statusText   = statusText,
+        btnSave      = btnSave,
+        btnTween     = btnTween,
+        btnArea      = btnArea,
+        btnClear     = btnClear,
     }
 end
 
@@ -640,7 +766,6 @@ function Controller.flashStatus(ui, msg, color)
     task.delay(1.6, function() Controller.updateStatus(ui) end)
 end
 
--- Ajusta tamanho do painel para caber na tela (mantém posição atual)
 function Controller.adaptPanel(ui)
     local cam = workspace.CurrentCamera
     local vp = cam.ViewportSize
@@ -649,7 +774,6 @@ function Controller.adaptPanel(ui)
     ui.panel.Size = UDim2.new(0, w, 0, h)
 end
 
--- Garante que o painel fique visível após resize/rotação
 function Controller.clampPanel(ui)
     local cam = workspace.CurrentCamera
     local vp = cam.ViewportSize
@@ -663,20 +787,21 @@ function Controller.clampPanel(ui)
     ui.panel.Position = UDim2.new(0, x, 0, y)
 end
 
--- Abre com animação de escala
 function Controller.openPanel(ui)
     if ui.panel.Visible then return end
 
-    -- Garante que o tamanho está adaptado
     Controller.adaptPanel(ui)
 
-    -- Mantém a posição anterior se houver, senão centraliza
     if not ui.panel.Position or ui.panel.Position.X.Scale == 0.5 then
         ui.panel.AnchorPoint = Vector2.new(0.5, 0.5)
         ui.panel.Position = UDim2.new(0.5, 0, 0.5, 0)
     else
         ui.panel.AnchorPoint = Vector2.new(0, 0)
     end
+
+    -- Sempre abre no menu principal
+    ui.body.Visible = true
+    ui.areasMenu.Visible = false
 
     local targetSize = ui.panel.Size
     ui.panel.Visible = true
@@ -688,13 +813,11 @@ function Controller.openPanel(ui)
         BackgroundTransparency = 0.12,
     }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
-    -- Reclampa após a animação
     task.delay(0.3, function()
         Controller.clampPanel(ui)
     end)
 end
 
--- Fecha com animação de encolhimento
 function Controller.closePanel(ui)
     if not ui.panel.Visible then return end
 
@@ -705,6 +828,9 @@ function Controller.closePanel(ui)
 
     task.delay(0.22, function()
         ui.panel.Visible = false
+        -- Reseta para o menu principal
+        ui.body.Visible = true
+        ui.areasMenu.Visible = false
     end)
 end
 
@@ -716,31 +842,33 @@ function Controller.togglePanel(ui)
     end
 end
 
+-- NOVO: navegação entre menu principal e submenu de áreas
+function Controller.showAreasMenu(ui)
+    ui.body.Visible = false
+    ui.areasMenu.Visible = true
+    -- animação suave
+    ui.areasMenu.BackgroundTransparency = 1
+    Utils.tween(ui.areasMenu, 0.2, { BackgroundTransparency = 1 })
+end
+
+function Controller.showMainMenu(ui)
+    ui.areasMenu.Visible = false
+    ui.body.Visible = true
+end
+
 function Controller.init()
     local ui = GUI.build()
 
-    ---------------------------------------------------------
-    -- Arrastar o PAINEL pela barra superior (header)
-    ---------------------------------------------------------
     Drag.makeDraggable(ui.header, ui.panel, nil, ui.gui)
 
-    ---------------------------------------------------------
-    -- Arrastar o BOTÃO FLUTUANTE "MH" (tap = abre/fecha)
-    ---------------------------------------------------------
     Drag.makeDraggable(ui.floatingBtn, ui.floatingBtn, function()
         Controller.togglePanel(ui)
     end, ui.gui)
 
-    ---------------------------------------------------------
-    -- Fechar SOMENTE pelo X ou pelo MH (já tratado no onTap)
-    ---------------------------------------------------------
     ui.closeBtn.MouseButton1Click:Connect(function()
         Controller.closePanel(ui)
     end)
 
-    ---------------------------------------------------------
-    -- Botões internos
-    ---------------------------------------------------------
     ui.btnSave.MouseButton1Click:Connect(function()
         local ok, err = Storage.save()
         if ok then
@@ -752,14 +880,37 @@ function Controller.init()
     end)
 
     ui.btnTween.MouseButton1Click:Connect(function()
-        -- Fecha o painel para liberar a tela durante o movimento
         Controller.closePanel(ui)
-
         local ok, err = TweenSystem.moveToSaved(false)
         if not ok then
             Controller.flashStatus(ui, "✖ " .. tostring(err), CONFIG.Theme.Danger)
         end
     end)
+
+    -- NOVO: abre o submenu de áreas
+    ui.btnArea.MouseButton1Click:Connect(function()
+        Controller.showAreasMenu(ui)
+    end)
+
+    -- NOVO: volta ao menu principal
+    ui.backBtn.MouseButton1Click:Connect(function()
+        Controller.showMainMenu(ui)
+    end)
+
+    -- NOVO: clique em cada botão de área teleporta
+    for _, entry in ipairs(ui.areaButtons) do
+        entry.button.MouseButton1Click:Connect(function()
+            local area = entry.area
+            Controller.closePanel(ui)
+            task.wait(0.15)
+            local ok, err = TweenSystem.moveToArea(area, false)
+            if not ok then
+                -- reabre o painel para mostrar erro
+                Controller.openPanel(ui)
+                Controller.flashStatus(ui, "✖ " .. tostring(err), CONFIG.Theme.Danger)
+            end
+        end)
+    end
 
     ui.btnClear.MouseButton1Click:Connect(function()
         Storage.clear()
@@ -767,9 +918,6 @@ function Controller.init()
         Controller.updateStatus(ui)
     end)
 
-    ---------------------------------------------------------
-    -- Adaptação a resize / rotação
-    ---------------------------------------------------------
     Controller.adaptPanel(ui)
 
     workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
@@ -777,7 +925,6 @@ function Controller.init()
         if ui.panel.Visible then
             Controller.clampPanel(ui)
         end
-        -- Reclampa o botão flutuante também
         local vp = workspace.CurrentCamera.ViewportSize
         local pos = ui.floatingBtn.AbsolutePosition
         local size = ui.floatingBtn.AbsoluteSize
