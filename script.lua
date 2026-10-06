@@ -1,18 +1,21 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB - Tween Ultra Rápido + Áreas
-    Interface com Abrir/Minimizar
+    MARIN HUB v9 - Steal An Egg
+    Arrastar + Imunidade + Áreas + Tween
     ═══════════════════════════════════════════
 ]]
 
 -- ====== SERVIÇOS ======
 local TweenService = game:GetService("TweenService")
-local LocalPlayer = game:GetService("Players").LocalPlayer
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
 
 -- ====== LIMPEZA ======
 for _, v in pairs(CoreGui:GetChildren()) do
-    if v.Name == "TesteTweenRapido" then
+    if v.Name == "MarinHub" then
         v:Destroy()
     end
 end
@@ -37,6 +40,7 @@ local areas = {
 -- ====== ESTADO ======
 local safePos = nil
 local teleportando = false
+local imunidadeAtiva = false
 
 -- ====== CORES ======
 local COR_FUNDO = Color3.fromRGB(22, 22, 28)
@@ -52,18 +56,45 @@ local COR_SUBTEXTO = Color3.fromRGB(140, 140, 155)
 
 -- ====== INTERFACE ======
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "TesteTweenRapido"
+screenGui.Name = "MarinHub"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
 screenGui.DisplayOrder = 999999
 
+-- ====== BOTÃO "MARIN HUB" ======
+local btnFlutuante = Instance.new("TextButton")
+btnFlutuante.Size = UDim2.new(0, 130, 0, 50)
+btnFlutuante.Position = UDim2.new(0, 20, 0.5, -25)
+btnFlutuante.BackgroundColor3 = COR_FUNDO
+btnFlutuante.TextColor3 = COR_VERDE
+btnFlutuante.Text = "Marin Hub"
+btnFlutuante.TextSize = 15
+btnFlutuante.Font = Enum.Font.GothamBlack
+btnFlutuante.BorderSizePixel = 0
+btnFlutuante.AutoButtonColor = false
+btnFlutuante.Active = true
+btnFlutuante.ZIndex = 100
+btnFlutuante.Parent = screenGui
+
+local bfc = Instance.new("UICorner")
+bfc.CornerRadius = UDim.new(0, 12)
+bfc.Parent = btnFlutuante
+
+local bfs = Instance.new("UIStroke")
+bfs.Color = COR_VERDE
+bfs.Thickness = 2
+bfs.Transparency = 0.3
+bfs.Parent = btnFlutuante
+
 -- ====== JANELA PRINCIPAL ======
 local janela = Instance.new("Frame")
-janela.Size = UDim2.new(0, 320, 0, 320)
-janela.Position = UDim2.new(0.5, -160, 0.5, -160)
+janela.Size = UDim2.new(0, 340, 0, 400)
+janela.Position = UDim2.new(0.5, -170, 0.5, -200)
 janela.BackgroundColor3 = COR_FUNDO
 janela.BorderSizePixel = 0
 janela.ClipsDescendants = true
+janela.Visible = false
+janela.ZIndex = 200
 janela.Parent = screenGui
 
 local jc = Instance.new("UICorner")
@@ -82,6 +113,7 @@ barraTitulo.Size = UDim2.new(1, 0, 0, 55)
 barraTitulo.BackgroundColor3 = COR_SECAO
 barraTitulo.BorderSizePixel = 0
 barraTitulo.Active = true
+barraTitulo.ZIndex = 201
 barraTitulo.Parent = janela
 
 local btc = Instance.new("UICorner")
@@ -93,6 +125,7 @@ btf.Size = UDim2.new(1, 0, 0, 15)
 btf.Position = UDim2.new(0, 0, 1, -15)
 btf.BackgroundColor3 = COR_SECAO
 btf.BorderSizePixel = 0
+btf.ZIndex = 201
 btf.Parent = barraTitulo
 
 local titulo = Instance.new("TextLabel")
@@ -104,41 +137,25 @@ titulo.TextColor3 = COR_VERDE
 titulo.TextSize = 18
 titulo.Font = Enum.Font.GothamBlack
 titulo.TextXAlignment = Enum.TextXAlignment.Left
+titulo.ZIndex = 202
 titulo.Parent = barraTitulo
 
 local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -120, 0, 14)
 subtitulo.Position = UDim2.new(0, 20, 0, 32)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Tween + Áreas"
+subtitulo.Text = "Steal An Egg • v9.0"
 subtitulo.TextColor3 = COR_SUBTEXTO
 subtitulo.TextSize = 10
 subtitulo.Font = Enum.Font.Gotham
 subtitulo.TextXAlignment = Enum.TextXAlignment.Left
+subtitulo.ZIndex = 202
 subtitulo.Parent = barraTitulo
-
--- Botão Minimizar
-local btnMin = Instance.new("TextButton")
-btnMin.Size = UDim2.new(0, 28, 0, 28)
-btnMin.Position = UDim2.new(1, -100, 0, 13)
-btnMin.BackgroundColor3 = COR_ROXO
-btnMin.TextColor3 = COR_TEXTO
-btnMin.Text = "—"
-btnMin.TextSize = 16
-btnMin.Font = Enum.Font.GothamBold
-btnMin.BorderSizePixel = 0
-btnMin.AutoButtonColor = false
-btnMin.Active = true
-btnMin.Parent = barraTitulo
-
-local bmc = Instance.new("UICorner")
-bmc.CornerRadius = UDim.new(0, 8)
-bmc.Parent = btnMin
 
 -- Botão Fechar
 local btnFechar = Instance.new("TextButton")
 btnFechar.Size = UDim2.new(0, 28, 0, 28)
-btnFechar.Position = UDim2.new(1, -65, 0, 13)
+btnFechar.Position = UDim2.new(1, -40, 0, 13)
 btnFechar.BackgroundColor3 = COR_VERMELHO
 btnFechar.TextColor3 = COR_TEXTO
 btnFechar.Text = "X"
@@ -147,36 +164,12 @@ btnFechar.Font = Enum.Font.GothamBold
 btnFechar.BorderSizePixel = 0
 btnFechar.AutoButtonColor = false
 btnFechar.Active = true
+btnFechar.ZIndex = 202
 btnFechar.Parent = barraTitulo
 
-local bfc = Instance.new("UICorner")
-bfc.CornerRadius = UDim.new(0, 8)
-bfc.Parent = btnFechar
-
--- Botão Reabrir
-local btnAbrir = Instance.new("TextButton")
-btnAbrir.Size = UDim2.new(0, 120, 0, 45)
-btnAbrir.Position = UDim2.new(0, 20, 0.5, -22)
-btnAbrir.BackgroundColor3 = COR_FUNDO
-btnAbrir.TextColor3 = COR_VERDE
-btnAbrir.Text = "Marin Hub"
-btnAbrir.TextSize = 16
-btnAbrir.Font = Enum.Font.GothamBlack
-btnAbrir.BorderSizePixel = 0
-btnAbrir.AutoButtonColor = false
-btnAbrir.Active = true
-btnAbrir.Visible = false
-btnAbrir.Parent = screenGui
-
-local bac = Instance.new("UICorner")
-bac.CornerRadius = UDim.new(0, 12)
-bac.Parent = btnAbrir
-
-local bas = Instance.new("UIStroke")
-bas.Color = COR_VERDE
-bas.Thickness = 2
-bas.Transparency = 0.3
-bas.Parent = btnAbrir
+local bfec = Instance.new("UICorner")
+bfec.CornerRadius = UDim.new(0, 8)
+bfec.Parent = btnFechar
 
 -- ====== CONTEÚDO ======
 local conteudo = Instance.new("ScrollingFrame")
@@ -187,6 +180,7 @@ conteudo.BorderSizePixel = 0
 conteudo.ScrollBarThickness = 5
 conteudo.ScrollBarImageColor3 = COR_VERDE
 conteudo.CanvasSize = UDim2.new(0, 0, 0, 500)
+conteudo.ZIndex = 202
 conteudo.Parent = janela
 
 local layout = Instance.new("UIListLayout")
@@ -211,6 +205,7 @@ local function criarBotao(texto, cor, callback)
     btn.AutoButtonColor = false
     btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.Active = true
+    btn.ZIndex = 203
     btn.Parent = conteudo
     
     local c = Instance.new("UICorner")
@@ -222,6 +217,7 @@ local function criarBotao(texto, cor, callback)
     barra.Position = UDim2.new(0, 10, 0.5, -13)
     barra.BackgroundColor3 = cor
     barra.BorderSizePixel = 0
+    barra.ZIndex = 204
     barra.Parent = btn
     
     local bc = Instance.new("UICorner")
@@ -250,7 +246,8 @@ status.BackgroundTransparency = 0.3
 status.TextColor3 = COR_VERDE
 status.TextSize = 11
 status.Font = Enum.Font.Gotham
-status.Text = "Salve a safe zone primeiro."
+status.Text = "Pronto."
+status.ZIndex = 203
 status.Parent = conteudo
 
 local sc = Instance.new("UICorner")
@@ -273,25 +270,20 @@ local function fazerTeleporte(destino)
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid then teleportando = false return end
     
-    -- 🛡️ God Mode
     humanoid.MaxHealth = math.huge
     humanoid.Health = math.huge
     
-    -- 🛡️ Sem colisão
     root.CanCollide = false
     
-    -- 🛡️ Zera velocidade
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
     
-    -- ⚡ TWEEN ULTRA RÁPIDO: 0.01 segundos
     local tweenInfo = TweenInfo.new(0.01, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
     local cframeFinal = typeof(destino) == "Vector3" and CFrame.new(destino) or destino
     local tween = TweenService:Create(root, tweenInfo, {CFrame = cframeFinal})
     tween:Play()
     tween.Completed:Wait()
     
-    -- Restaura após 0.5s
     task.wait(0.5)
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
@@ -302,7 +294,44 @@ local function fazerTeleporte(destino)
     teleportando = false
 end
 
--- ====== SUBMENU DE ÁREAS (CORRIGIDO) ======
+-- ====== IMUNIDADE ======
+local function aplicarImunidade()
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.MaxHealth = math.huge
+        humanoid.Health = math.huge
+    end
+    
+    for _, parte in pairs(char:GetDescendants()) do
+        if parte:IsA("BasePart") then
+            parte.CanTouch = false
+            parte.CanQuery = false
+        end
+    end
+end
+
+local function removerImunidade()
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.MaxHealth = 100
+        humanoid.Health = 100
+    end
+    
+    for _, parte in pairs(char:GetDescendants()) do
+        if parte:IsA("BasePart") then
+            parte.CanTouch = true
+            parte.CanQuery = true
+        end
+    end
+end
+
+-- ====== SUBMENU DE ÁREAS ======
 local submenuAberto = false
 local submenuFrame = nil
 
@@ -335,7 +364,6 @@ local function abrirSubmenu()
     ss2.Transparency = 0.5
     ss2.Parent = submenuFrame
     
-    -- Cabeçalho
     local subHeader = Instance.new("Frame")
     subHeader.Size = UDim2.new(1, 0, 0, 50)
     subHeader.BackgroundColor3 = COR_SECAO
@@ -387,7 +415,6 @@ local function abrirSubmenu()
     voltar.Activated:Connect(fecharSubmenu)
     voltar.MouseButton1Click:Connect(fecharSubmenu)
     
-    -- Scroll do submenu
     local subScroll = Instance.new("ScrollingFrame")
     subScroll.Size = UDim2.new(1, -20, 1, -65)
     subScroll.Position = UDim2.new(0, 10, 0, 55)
@@ -404,7 +431,6 @@ local function abrirSubmenu()
     sl.SortOrder = Enum.SortOrder.LayoutOrder
     sl.Parent = subScroll
     
-    -- Cria os botões
     for _, area in ipairs(areas) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, -5, 0, 42)
@@ -456,12 +482,11 @@ local function abrirSubmenu()
         end)
     end
     
-    -- Atualiza CanvasSize depois de criar os botões
     task.wait(0.1)
     subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 20)
 end
 
--- ====== BOTÕES ======
+-- ====== BOTÕES DO MENU ======
 criarBotao("📍 Salvar Safe Zone", COR_AZUL, function()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -482,6 +507,21 @@ criarBotao("⚡ Tween Ultra Rápido", COR_VERMELHO, function()
     status.TextColor3 = COR_VERDE
 end)
 
+local btnImunidade = criarBotao("🛡️ Imunidade: OFF", COR_VERDE, function()
+    imunidadeAtiva = not imunidadeAtiva
+    if imunidadeAtiva then
+        btnImunidade.Text = "   🛡️ Imunidade: ON"
+        aplicarImunidade()
+        status.Text = "🛡️ Imunidade ativada!"
+        status.TextColor3 = COR_VERDE
+    else
+        btnImunidade.Text = "   🛡️ Imunidade: OFF"
+        removerImunidade()
+        status.Text = "Imunidade desativada."
+        status.TextColor3 = COR_SUBTEXTO
+    end
+end)
+
 criarBotao("🗺️ Escolher Área", COR_ROXO, function()
     if submenuAberto then
         fecharSubmenu()
@@ -490,58 +530,113 @@ criarBotao("🗺️ Escolher Área", COR_ROXO, function()
     end
 end)
 
--- ====== MINIMIZAR / ABRIR ======
-btnMin.MouseButton1Click:Connect(function()
-    janela.Visible = false
-    btnAbrir.Visible = true
-end)
-btnMin.Activated:Connect(function()
-    janela.Visible = false
-    btnAbrir.Visible = true
-end)
+-- ====== ARRASTAR BOTÃO FLUTUANTE (UserInputService) ======
+local arrastandoBtn = false
+local btnInicioX, btnInicioY
+local btnPosInicial
 
-btnAbrir.MouseButton1Click:Connect(function()
-    janela.Visible = true
-    btnAbrir.Visible = false
-end)
-btnAbrir.Activated:Connect(function()
-    janela.Visible = true
-    btnAbrir.Visible = false
-end)
-
--- ====== FECHAR ======
-btnFechar.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
-end)
-btnFechar.Activated:Connect(function()
-    screenGui:Destroy()
-end)
-
--- ====== ARRASTAR JANELA ======
-local arrastandoJanela = false
-local inicioX, inicioY
-local posInicial
-
-barraTitulo.MouseButton1Down:Connect(function(x, y)
-    arrastandoJanela = true
-    inicioX = x
-    inicioY = y
-    posInicial = janela.Position
-end)
-
-barraTitulo.MouseMoved:Connect(function(x, y)
-    if arrastandoJanela then
-        local deltaX = x - inicioX
-        local deltaY = y - inicioY
-        janela.Position = UDim2.new(
-            posInicial.X.Scale, posInicial.X.Offset + deltaX,
-            posInicial.Y.Scale, posInicial.Y.Offset + deltaY
-        )
+UserInputService.InputBegan:Connect(function(input, processado)
+    if processado then return end
+    if input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    local toqueX = input.Position.X
+    local toqueY = input.Position.Y
+    
+    local btnPos = btnFlutuante.AbsolutePosition
+    local btnSize = btnFlutuante.AbsoluteSize
+    
+    if toqueX >= btnPos.X and toqueX <= btnPos.X + btnSize.X 
+       and toqueY >= btnPos.Y and toqueY <= btnPos.Y + btnSize.Y then
+        arrastandoBtn = true
+        btnInicioX = toqueX
+        btnInicioY = toqueY
+        btnPosInicial = btnFlutuante.Position
     end
 end)
 
-barraTitulo.MouseButton1Up:Connect(function()
-    arrastandoJanela = false
+UserInputService.InputChanged:Connect(function(input)
+    if not arrastandoBtn then return end
+    if input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    local deltaX = input.Position.X - btnInicioX
+    local deltaY = input.Position.Y - btnInicioY
+    btnFlutuante.Position = UDim2.new(
+        btnPosInicial.X.Scale, btnPosInicial.X.Offset + deltaX,
+        btnPosInicial.Y.Scale, btnPosInicial.Y.Offset + deltaY
+    )
 end)
 
-print("Marin Hub - Tween + Áreas carregado!")
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        arrastandoBtn = false
+    end
+end)
+
+-- ====== ARRASTAR JANELA (UserInputService) ======
+local arrastandoJanela = false
+local janelaInicioX, janelaInicioY
+local janelaPosInicial
+
+UserInputService.InputBegan:Connect(function(input, processado)
+    if processado then return end
+    if input.UserInputType ~= Enum.UserInputType.Touch then return end
+    if not janela.Visible then return end
+    
+    local toqueX = input.Position.X
+    local toqueY = input.Position.Y
+    
+    local headerPos = barraTitulo.AbsolutePosition
+    local headerSize = barraTitulo.AbsoluteSize
+    
+    if toqueX >= headerPos.X and toqueX <= headerPos.X + headerSize.X 
+       and toqueY >= headerPos.Y and toqueY <= headerPos.Y + headerSize.Y then
+        arrastandoJanela = true
+        janelaInicioX = toqueX
+        janelaInicioY = toqueY
+        janelaPosInicial = janela.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if not arrastandoJanela then return end
+    if input.UserInputType ~= Enum.UserInputType.Touch then return end
+    
+    local deltaX = input.Position.X - janelaInicioX
+    local deltaY = input.Position.Y - janelaInicioY
+    janela.Position = UDim2.new(
+        janelaPosInicial.X.Scale, janelaPosInicial.X.Offset + deltaX,
+        janelaPosInicial.Y.Scale, janelaPosInicial.Y.Offset + deltaY
+    )
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        arrastandoJanela = false
+    end
+end)
+
+-- ====== ABRIR/FECHAR JANELA ======
+btnFlutuante.Activated:Connect(function()
+    janela.Visible = not janela.Visible
+end)
+
+btnFlutuante.MouseButton1Click:Connect(function()
+    janela.Visible = not janela.Visible
+end)
+
+btnFechar.Activated:Connect(function()
+    janela.Visible = false
+end)
+
+btnFechar.MouseButton1Click:Connect(function()
+    janela.Visible = false
+end)
+
+-- Mantém imunidade ligada
+RunService.Heartbeat:Connect(function()
+    if imunidadeAtiva then
+        aplicarImunidade()
+    end
+end)
+
+print("Marin Hub v9 carregado!")
