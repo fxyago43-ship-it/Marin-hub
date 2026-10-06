@@ -1,7 +1,7 @@
 --[[
     ═══════════════════════════════════════════
-    MH HUB - Tween Ultra Rápido (AUTO)
-    Auto-Tween quando pegar ovo
+    MH HUB - Tween Ultra Rápido + Auto
+    Tap pra abrir, arrasto pra mover
     ═══════════════════════════════════════════
 ]]
 
@@ -125,7 +125,7 @@ local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -90, 0, 12)
 subtitulo.Position = UDim2.new(0, 15, 0, 30)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Tween Ultra Rápido + Auto"
+subtitulo.Text = "Tween Ultra Rápido"
 subtitulo.TextColor3 = COR_SUBTEXTO
 subtitulo.TextSize = 9
 subtitulo.Font = Enum.Font.Gotham
@@ -288,7 +288,7 @@ local function fazerTeleporte()
     teleportando = false
 end
 
--- ====== AUTO-TWEEN (DETECÇÃO DE OVO) ======
+-- ====== AUTO-TWEEN ======
 local function monitorarOvo()
     local char = LocalPlayer.Character
     if not char then return end
@@ -297,10 +297,8 @@ local function monitorarOvo()
         if not autoTweenAtivo then return end
         if not safePos then return end
         
-        -- Verifica se é uma ferramenta (ovo)
         if child:IsA("Tool") then
             local nome = string.lower(child.Name)
-            -- Detecta qualquer coisa com "egg" ou "ovo" no nome
             if string.find(nome, "egg") or string.find(nome, "ovo") then
                 status.Text = "🥚 Ovo detectado! Teleportando..."
                 status.TextColor3 = COR_ROXO
@@ -311,7 +309,6 @@ local function monitorarOvo()
     end)
 end
 
--- Reconecta ao personagem quando ele renasce
 LocalPlayer.CharacterAdded:Connect(function()
     task.wait(1)
     monitorarOvo()
@@ -355,17 +352,21 @@ btnMin.MouseButton1Click:Connect(function() janela.Visible = false end)
 btnFechar.Activated:Connect(function() screenGui:Destroy() end)
 btnFechar.MouseButton1Click:Connect(function() screenGui:Destroy() end)
 
--- ====== ARRASTAR BOTÃO ======
+-- ====== ARRASTAR BOTÃO + TAP (SISTEMA CORRIGIDO) ======
 local arrastandoBtn = false
 local btnInicioX, btnInicioY
 local btnPosInicial
+local toqueInicio = 0
+local moveuMuito = false
 
 btnFlutuante.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
         arrastandoBtn = true
+        moveuMuito = false
         btnInicioX = input.Position.X
         btnInicioY = input.Position.Y
         btnPosInicial = btnFlutuante.Position
+        toqueInicio = tick()
     end
 end)
 
@@ -373,6 +374,12 @@ btnFlutuante.InputChanged:Connect(function(input)
     if arrastandoBtn and input.UserInputType == Enum.UserInputType.Touch then
         local deltaX = input.Position.X - btnInicioX
         local deltaY = input.Position.Y - btnInicioY
+        
+        -- Se moveu mais de 10 pixels, é arrasto
+        if math.abs(deltaX) > 10 or math.abs(deltaY) > 10 then
+            moveuMuito = true
+        end
+        
         btnFlutuante.Position = UDim2.new(
             btnPosInicial.X.Scale, btnPosInicial.X.Offset + deltaX,
             btnPosInicial.Y.Scale, btnPosInicial.Y.Offset + deltaY
@@ -383,6 +390,11 @@ end)
 btnFlutuante.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch then
         arrastandoBtn = false
+        
+        -- Se NÃO moveu muito e o tempo foi curto = TAP → abre menu
+        if not moveuMuito and (tick() - toqueInicio) < 0.5 then
+            janela.Visible = not janela.Visible
+        end
     end
 end)
 
@@ -417,12 +429,4 @@ barraTitulo.InputEnded:Connect(function(input)
     end
 end)
 
--- ====== ABRIR/FECHAR JANELA ======
-btnFlutuante.Activated:Connect(function()
-    janela.Visible = not janela.Visible
-end)
-btnFlutuante.MouseButton1Click:Connect(function()
-    janela.Visible = not janela.Visible
-end)
-
-print("MH Hub com Auto-Tween carregado!")
+print("MH Hub carregado!")
