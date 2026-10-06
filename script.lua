@@ -1,14 +1,13 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB v7.1 - Steal An Egg
-    Menu via UserInputService + Áreas
+    MARIN HUB v8 - Steal An Egg
+    GUI com Abrir/Minimizar
     ═══════════════════════════════════════════
 ]]
 
 -- ====== SERVIÇOS ======
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
@@ -39,9 +38,7 @@ local areas = {
 -- ====== ESTADO ======
 local safePos = nil
 local teleportando = false
-local menuAberto = false
-local submenuAberto = false
-local submenuFrame = nil
+local minimizado = false
 
 -- ====== CORES ======
 local COR_FUNDO = Color3.fromRGB(22, 22, 28)
@@ -60,128 +57,148 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MarinHub"
 screenGui.Parent = CoreGui
 screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = false
 screenGui.DisplayOrder = 999999
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Botão flutuante "M"
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 60, 0, 60)
-toggleBtn.Position = UDim2.new(0, 20, 0.5, -30)
-toggleBtn.BackgroundColor3 = COR_FUNDO
-toggleBtn.TextColor3 = COR_VERDE
-toggleBtn.Text = "M"
-toggleBtn.TextSize = 26
-toggleBtn.Font = Enum.Font.GothamBlack
-toggleBtn.BorderSizePixel = 0
-toggleBtn.AutoButtonColor = false
-toggleBtn.Active = true
-toggleBtn.ZIndex = 100
-toggleBtn.Parent = screenGui
+-- ====== JANELA PRINCIPAL ======
+local janela = Instance.new("Frame")
+janela.Size = UDim2.new(0, 320, 0, 450)
+janela.Position = UDim2.new(0.5, -160, 0.5, -225)
+janela.BackgroundColor3 = COR_FUNDO
+janela.BorderSizePixel = 0
+janela.ClipsDescendants = true
+janela.Parent = screenGui
 
-local tc = Instance.new("UICorner")
-tc.CornerRadius = UDim.new(1, 0)
-tc.Parent = toggleBtn
+local jc = Instance.new("UICorner")
+jc.CornerRadius = UDim.new(0, 16)
+jc.Parent = janela
 
-local ts = Instance.new("UIStroke")
-ts.Color = COR_VERDE
-ts.Thickness = 2
-ts.Transparency = 0.3
-ts.Parent = toggleBtn
+local js = Instance.new("UIStroke")
+js.Color = COR_VERDE
+js.Thickness = 1.5
+js.Transparency = 0.4
+js.Parent = janela
 
--- ====== MENU ======
-local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 300, 0, 420)
-menu.Position = UDim2.new(0.5, -150, 0.5, -210)
-menu.BackgroundColor3 = COR_FUNDO
-menu.BorderSizePixel = 0
-menu.Visible = false
-menu.ZIndex = 200
-menu.Parent = screenGui
+-- ====== BARRA DE TÍTULO (com botões) ======
+local barraTitulo = Instance.new("Frame")
+barraTitulo.Size = UDim2.new(1, 0, 0, 55)
+barraTitulo.BackgroundColor3 = COR_SECAO
+barraTitulo.BorderSizePixel = 0
+barraTitulo.Active = true
+barraTitulo.Parent = janela
 
-local mc = Instance.new("UICorner")
-mc.CornerRadius = UDim.new(0, 16)
-mc.Parent = menu
+local btc = Instance.new("UICorner")
+btc.CornerRadius = UDim.new(0, 16)
+btc.Parent = barraTitulo
 
-local ms = Instance.new("UIStroke")
-ms.Color = COR_VERDE
-ms.Thickness = 1.5
-ms.Transparency = 0.5
-ms.Parent = menu
+local btf = Instance.new("Frame")
+btf.Size = UDim2.new(1, 0, 0, 15)
+btf.Position = UDim2.new(0, 0, 1, -15)
+btf.BackgroundColor3 = COR_SECAO
+btf.BorderSizePixel = 0
+btf.Parent = barraTitulo
 
--- Cabeçalho do menu
-local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 70)
-header.BackgroundColor3 = COR_SECAO
-header.BorderSizePixel = 0
-header.Active = true
-header.ZIndex = 201
-header.Parent = menu
-
-local hc = Instance.new("UICorner")
-hc.CornerRadius = UDim.new(0, 16)
-hc.Parent = header
-
-local hf = Instance.new("Frame")
-hf.Size = UDim2.new(1, 0, 0, 20)
-hf.Position = UDim2.new(0, 0, 1, -20)
-hf.BackgroundColor3 = COR_SECAO
-hf.BorderSizePixel = 0
-hf.ZIndex = 201
-hf.Parent = header
-
+-- Título
 local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, -30, 0, 28)
+titulo.Size = UDim2.new(1, -120, 0, 25)
 titulo.Position = UDim2.new(0, 20, 0, 12)
 titulo.BackgroundTransparency = 1
 titulo.Text = "MARIN HUB"
 titulo.TextColor3 = COR_VERDE
-titulo.TextSize = 20
+titulo.TextSize = 18
 titulo.Font = Enum.Font.GothamBlack
 titulo.TextXAlignment = Enum.TextXAlignment.Left
-titulo.ZIndex = 202
-titulo.Parent = header
+titulo.Parent = barraTitulo
 
 local subtitulo = Instance.new("TextLabel")
-subtitulo.Size = UDim2.new(1, -30, 0, 16)
-subtitulo.Position = UDim2.new(0, 20, 0, 40)
+subtitulo.Size = UDim2.new(1, -120, 0, 14)
+subtitulo.Position = UDim2.new(0, 20, 0, 34)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v7.1"
+subtitulo.Text = "Steal An Egg • v8.0"
 subtitulo.TextColor3 = COR_SUBTEXTO
-subtitulo.TextSize = 11
+subtitulo.TextSize = 10
 subtitulo.Font = Enum.Font.Gotham
 subtitulo.TextXAlignment = Enum.TextXAlignment.Left
-subtitulo.ZIndex = 202
-subtitulo.Parent = header
+subtitulo.Parent = barraTitulo
 
-local linha = Instance.new("Frame")
-linha.Size = UDim2.new(1, -40, 0, 1)
-linha.Position = UDim2.new(0, 20, 0, 69)
-linha.BackgroundColor3 = COR_VERDE
-linha.BackgroundTransparency = 0.6
-linha.BorderSizePixel = 0
-linha.ZIndex = 202
-linha.Parent = header
+-- Botão Minimizar
+local btnMin = Instance.new("TextButton")
+btnMin.Size = UDim2.new(0, 28, 0, 28)
+btnMin.Position = UDim2.new(1, -100, 0, 13)
+btnMin.BackgroundColor3 = COR_ROXO
+btnMin.TextColor3 = COR_TEXTO
+btnMin.Text = "—"
+btnMin.TextSize = 16
+btnMin.Font = Enum.Font.GothamBold
+btnMin.BorderSizePixel = 0
+btnMin.AutoButtonColor = false
+btnMin.Active = true
+btnMin.Parent = barraTitulo
 
--- Scroll do menu
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -20, 1, -85)
-scroll.Position = UDim2.new(0, 10, 0, 78)
-scroll.BackgroundTransparency = 1
-scroll.BorderSizePixel = 0
-scroll.ScrollBarThickness = 5
-scroll.ScrollBarImageColor3 = COR_VERDE
-scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
-scroll.ZIndex = 201
-scroll.Parent = menu
+local bmc = Instance.new("UICorner")
+bmc.CornerRadius = UDim.new(0, 8)
+bmc.Parent = btnMin
+
+-- Botão Fechar
+local btnFechar = Instance.new("TextButton")
+btnFechar.Size = UDim2.new(0, 28, 0, 28)
+btnFechar.Position = UDim2.new(1, -65, 0, 13)
+btnFechar.BackgroundColor3 = COR_VERMELHO
+btnFechar.TextColor3 = COR_TEXTO
+btnFechar.Text = "X"
+btnFechar.TextSize = 14
+btnFechar.Font = Enum.Font.GothamBold
+btnFechar.BorderSizePixel = 0
+btnFechar.AutoButtonColor = false
+btnFechar.Active = true
+btnFechar.Parent = barraTitulo
+
+local bfc = Instance.new("UICorner")
+bfc.CornerRadius = UDim.new(0, 8)
+bfc.Parent = btnFechar
+
+-- Botão Minimizado (aparece quando minimiza)
+local btnAbrir = Instance.new("TextButton")
+btnAbrir.Size = UDim2.new(0, 120, 0, 45)
+btnAbrir.Position = UDim2.new(0, 20, 0.5, -22)
+btnAbrir.BackgroundColor3 = COR_FUNDO
+btnAbrir.TextColor3 = COR_VERDE
+btnAbrir.Text = "Marin Hub"
+btnAbrir.TextSize = 16
+btnAbrir.Font = Enum.Font.GothamBlack
+btnAbrir.BorderSizePixel = 0
+btnAbrir.AutoButtonColor = false
+btnAbrir.Active = true
+btnAbrir.Visible = false
+btnAbrir.Parent = screenGui
+
+local bac = Instance.new("UICorner")
+bac.CornerRadius = UDim.new(0, 12)
+bac.Parent = btnAbrir
+
+local bas = Instance.new("UIStroke")
+bas.Color = COR_VERDE
+bas.Thickness = 2
+bas.Transparency = 0.3
+bas.Parent = btnAbrir
+
+-- ====== CONTEÚDO ======
+local conteudo = Instance.new("ScrollingFrame")
+conteudo.Size = UDim2.new(1, -20, 1, -70)
+conteudo.Position = UDim2.new(0, 10, 0, 63)
+conteudo.BackgroundTransparency = 1
+conteudo.BorderSizePixel = 0
+conteudo.ScrollBarThickness = 5
+conteudo.ScrollBarImageColor3 = COR_VERDE
+conteudo.CanvasSize = UDim2.new(0, 0, 0, 500)
+conteudo.Parent = janela
 
 local layout = Instance.new("UIListLayout")
 layout.Padding = UDim.new(0, 8)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Parent = scroll
+layout.Parent = conteudo
 
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+    conteudo.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
 end)
 
 -- Função criar botão
@@ -197,8 +214,7 @@ local function criarBotao(texto, cor, callback)
     btn.AutoButtonColor = false
     btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.Active = true
-    btn.ZIndex = 202
-    btn.Parent = scroll
+    btn.Parent = conteudo
     
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, 10)
@@ -209,7 +225,6 @@ local function criarBotao(texto, cor, callback)
     barra.Position = UDim2.new(0, 10, 0.5, -13)
     barra.BackgroundColor3 = cor
     barra.BorderSizePixel = 0
-    barra.ZIndex = 203
     barra.Parent = btn
     
     local bc = Instance.new("UICorner")
@@ -271,6 +286,9 @@ local function fazerTeleporte(destino)
 end
 
 -- ====== SUBMENU DE ÁREAS ======
+local submenuAberto = false
+local submenuFrame = nil
+
 local function fecharSubmenu()
     if submenuFrame then
         submenuFrame:Destroy()
@@ -435,7 +453,7 @@ criarBotao("Tween Ultra Rápido", COR_VERMELHO, function()
     end
 end)
 
-local areaBtn = criarBotao("Escolher Área", COR_ROXO, function()
+criarBotao("Escolher Área", COR_ROXO, function()
     if submenuAberto then
         fecharSubmenu()
     else
@@ -443,131 +461,65 @@ local areaBtn = criarBotao("Escolher Área", COR_ROXO, function()
     end
 end)
 
--- ====== ARRASTAR MENU ======
-local arrastandoMenu = false
+-- ====== MINIMIZAR / ABRIR ======
+btnMin.MouseButton1Click:Connect(function()
+    minimizado = true
+    janela.Visible = false
+    btnAbrir.Visible = true
+end)
+
+btnMin.Activated:Connect(function()
+    minimizado = true
+    janela.Visible = false
+    btnAbrir.Visible = true
+end)
+
+btnAbrir.MouseButton1Click:Connect(function()
+    minimizado = false
+    janela.Visible = true
+    btnAbrir.Visible = false
+end)
+
+btnAbrir.Activated:Connect(function()
+    minimizado = false
+    janela.Visible = true
+    btnAbrir.Visible = false
+end)
+
+-- ====== FECHAR ======
+btnFechar.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+btnFechar.Activated:Connect(function()
+    screenGui:Destroy()
+end)
+
+-- ====== ARRASTAR JANELA ======
+local arrastandoJanela = false
 local inicioX, inicioY
 local posInicial
 
-UserInputService.InputBegan:Connect(function(input, processado)
-    if processado then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    local toqueX = input.Position.X
-    local toqueY = input.Position.Y
-    
-    -- Verifica se tocou no cabeçalho do menu
-    local headerPos = header.AbsolutePosition
-    local headerSize = header.AbsoluteSize
-    
-    if menu.Visible and toqueX >= headerPos.X and toqueX <= headerPos.X + headerSize.X 
-       and toqueY >= headerPos.Y and toqueY <= headerPos.Y + headerSize.Y then
-        arrastandoMenu = true
-        inicioX = toqueX
-        inicioY = toqueY
-        posInicial = menu.Position
+barraTitulo.MouseButton1Down:Connect(function(x, y)
+    arrastandoJanela = true
+    inicioX = x
+    inicioY = y
+    posInicial = janela.Position
+end)
+
+barraTitulo.MouseMoved:Connect(function(x, y)
+    if arrastandoJanela then
+        local deltaX = x - inicioX
+        local deltaY = y - inicioY
+        janela.Position = UDim2.new(
+            posInicial.X.Scale, posInicial.X.Offset + deltaX,
+            posInicial.Y.Scale, posInicial.Y.Offset + deltaY
+        )
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if not arrastandoMenu then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    local deltaX = input.Position.X - inicioX
-    local deltaY = input.Position.Y - inicioY
-    menu.Position = UDim2.new(
-        posInicial.X.Scale, posInicial.X.Offset + deltaX,
-        posInicial.Y.Scale, posInicial.Y.Offset + deltaY
-    )
+barraTitulo.MouseButton1Up:Connect(function()
+    arrastandoJanela = false
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        arrastandoMenu = false
-    end
-end)
-
--- ====== ARRASTAR BOTÃO M ======
-local arrastandoM = false
-local inicioMX, inicioMY
-local posMInicial
-
-UserInputService.InputBegan:Connect(function(input, processado)
-    if processado then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    local toqueX = input.Position.X
-    local toqueY = input.Position.Y
-    
-    local btnPos = toggleBtn.AbsolutePosition
-    local btnSize = toggleBtn.AbsoluteSize
-    
-    if toqueX >= btnPos.X and toqueX <= btnPos.X + btnSize.X 
-       and toqueY >= btnPos.Y and toqueY <= btnPos.Y + btnSize.Y then
-        arrastandoM = true
-        inicioMX = toqueX
-        inicioMY = toqueY
-        posMInicial = toggleBtn.Position
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if not arrastandoM then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    local deltaX = input.Position.X - inicioMX
-    local deltaY = input.Position.Y - inicioMY
-    toggleBtn.Position = UDim2.new(
-        posMInicial.X.Scale, posMInicial.X.Offset + deltaX,
-        posMInicial.Y.Scale, posMInicial.Y.Offset + deltaY
-    )
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        arrastandoM = false
-    end
-end)
-
--- ====== ABRIR/FECHAR MENU (POR POSIÇÃO) ======
-UserInputService.InputEnded:Connect(function(input, processado)
-    if processado then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    -- Verifica se o toque foi um TAP no botão M
-    local toqueX = input.Position.X
-    local toqueY = input.Position.Y
-    
-    local btnPos = toggleBtn.AbsolutePosition
-    local btnSize = toggleBtn.AbsoluteSize
-    
-    if toqueX >= btnPos.X and toqueX <= btnPos.X + btnSize.X 
-       and toqueY >= btnPos.Y and toqueY <= btnPos.Y + btnSize.Y then
-        menuAberto = not menuAberto
-        menu.Visible = menuAberto
-        print(">>> Menu:", menuAberto)
-    end
-end)
-
--- ====== DETECTAR CLIQUE NO BOTÃO "ESCOLHER ÁREA" POR POSIÇÃO ======
-UserInputService.InputEnded:Connect(function(input, processado)
-    if processado then return end
-    if input.UserInputType ~= Enum.UserInputType.Touch then return end
-    
-    local toqueX = input.Position.X
-    local toqueY = input.Position.Y
-    
-    local btnPos = areaBtn.AbsolutePosition
-    local btnSize = areaBtn.AbsoluteSize
-    
-    if menu.Visible and toqueX >= btnPos.X and toqueX <= btnPos.X + btnSize.X 
-       and toqueY >= btnPos.Y and toqueY <= btnPos.Y + btnSize.Y then
-        if submenuAberto then
-            fecharSubmenu()
-        else
-            abrirSubmenu()
-        end
-        print(">>> Submenu aberto!")
-    end
-end)
-
-print("Marin Hub v7.1 carregado!")
+print("Marin Hub v8 carregado!")
