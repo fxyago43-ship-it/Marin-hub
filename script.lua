@@ -1,6 +1,6 @@
 --[[
     ═══════════════════════════════════════════
-    MARIN HUB v5.1 - Steal An Egg
+    MARIN HUB v5.2 - Steal An Egg
     Interface RGB + Teleporte por Áreas
     ═══════════════════════════════════════════
 ]]
@@ -95,8 +95,8 @@ end)
 
 -- ====== MENU PRINCIPAL ======
 local menu = Instance.new("Frame")
-menu.Size = UDim2.new(0, 0, 0, 0)
-menu.Position = UDim2.new(0, 90, 0.5, -220)
+menu.Size = UDim2.new(0, 270, 0, 380)
+menu.Position = UDim2.new(0, 90, 0.5, -190)
 menu.BackgroundColor3 = COR_FUNDO
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -165,7 +165,7 @@ local subtitulo = Instance.new("TextLabel")
 subtitulo.Size = UDim2.new(1, -60, 0, 18)
 subtitulo.Position = UDim2.new(0, 50, 0, 38)
 subtitulo.BackgroundTransparency = 1
-subtitulo.Text = "Steal An Egg • v5.1 (arraste aqui)"
+subtitulo.Text = "Steal An Egg • v5.2 (arraste aqui)"
 subtitulo.TextColor3 = Color3.fromRGB(150, 150, 160)
 subtitulo.TextSize = 11
 subtitulo.Font = Enum.Font.Gotham
@@ -327,7 +327,6 @@ local function abrirSubmenu()
     tit.ZIndex = 31
     tit.Parent = submenuFrame
     
-    -- Botão Voltar
     local voltar = Instance.new("TextButton")
     voltar.Size = UDim2.new(0, 70, 0, 28)
     voltar.Position = UDim2.new(1, -80, 0, 6)
@@ -346,7 +345,6 @@ local function abrirSubmenu()
     
     voltar.MouseButton1Click:Connect(fecharSubmenu)
     
-    -- Scroll do submenu
     local subScroll = Instance.new("ScrollingFrame")
     subScroll.Size = UDim2.new(1, -20, 1, -50)
     subScroll.Position = UDim2.new(0, 10, 0, 40)
@@ -367,7 +365,6 @@ local function abrirSubmenu()
         subScroll.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 10)
     end)
     
-    -- Botão pra cada área
     for _, area in ipairs(areas) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, -5, 0, 40)
@@ -489,26 +486,10 @@ toggleBtn.InputEnded:Connect(function(input)
     end
 end)
 
--- ====== ABRIR/FECHAR MENU ======
-local function animarMenu(abrir)
-    if abrir then
-        menu.Visible = true
-        menu.Size = UDim2.new(0, 0, 0, 0)
-        TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {
-            Size = UDim2.new(0, 270, 0, 380)
-        }):Play()
-    else
-        local t = TweenService:Create(menu, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {
-            Size = UDim2.new(0, 0, 0, 0)
-        })
-        t:Play()
-        t.Completed:Connect(function() menu.Visible = false end)
-    end
-end
-
+-- ====== ABRIR/FECHAR MENU (SIMPLES) ======
 toggleBtn.MouseButton1Click:Connect(function()
     menuAberto = not menuAberto
-    animarMenu(menuAberto)
+    menu.Visible = menuAberto
 end)
 
-print("Marin Hub v5.1 carregado!")
+print("Marin Hub v5.2 carregado!")
